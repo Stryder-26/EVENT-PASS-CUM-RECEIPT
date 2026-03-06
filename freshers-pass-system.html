@@ -9,7 +9,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <!-- EmailJS for auto email -->
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>(function(){ emailjs.init("9YFh5zFapIlH2-Xmc"); })();</script>
 <style>
 :root{
   --gold:#F5C842;--gold-dark:#C9A227;
@@ -612,9 +613,9 @@ const firebaseConfig = {
 };
 
 // ══ EMAILJS CONFIG — set up at emailjs.com (free) ══
-const EMAILJS_SERVICE  = "YOUR_SERVICE_ID";   // replace after EmailJS setup
-const EMAILJS_TEMPLATE = "YOUR_TEMPLATE_ID";  // replace after EmailJS setup
-const EMAILJS_KEY      = "YOUR_PUBLIC_KEY";   // replace after EmailJS setup
+const EMAILJS_SERVICE  = "service_quemxen";
+const EMAILJS_TEMPLATE = "template_3n174li";
+const EMAILJS_KEY      = "9YFh5zFapIlH2-Xmc";
 
 // ══ ACCESS CONTROL ══
 const MASTER_EMAIL    = "vbhrshrvstv@gmail.com";
@@ -961,62 +962,78 @@ window.generatePass = async () => {
   }
 };
 
-// ══ EMAIL — using EmailJS ══
+// ══ EMAIL — EmailJS v3 with QR image ══
 async function sendPassEmail(email, name, year, dept, passID, amount, mode) {
   const statusEl = document.getElementById('email-status');
   statusEl.innerHTML = `<span class="email-sending">⏳ Sending email to ${email}…</span>`;
 
-  // Check if EmailJS is configured
-  if (EMAILJS_SERVICE === 'YOUR_SERVICE_ID') {
-    // Fallback: open mailto
+  // Wait a moment for QR canvas to render
+  await new Promise(r => setTimeout(r, 600));
+
+  // Capture QR code as base64 image from the rendered canvas
+  let qrImage = '';
+  try {
+    const qk = passID.replace(/[^a-z0-9]/gi,'_');
+    const qrBox = document.getElementById(`qrbox_${qk}`);
+    const canvas = qrBox ? qrBox.querySelector('canvas') : null;
+    if (canvas) qrImage = canvas.toDataURL('image/png');
+  } catch(e) { console.warn('QR capture failed', e); }
+
+  // Capture full pass card as base64
+  let passImage = '';
+  try {
+    const passEl = document.getElementById('printable-pass');
+    if (passEl && window.html2canvas) {
+      const c = await html2canvas(passEl, { backgroundColor:'#0f0f1a', scale:2, useCORS:true });
+      passImage = c.toDataURL('image/png');
+    }
+  } catch(e) { console.warn('Pass image capture failed', e); }
+
+  try {
+    emailjs.init(EMAILJS_KEY);
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      to_email:   email,
+      to_name:    name,
+      pass_id:    passID,
+      year:       year,
+      dept:       dept,
+      amount:     `₹${amount}`,
+      mode:       mode.toUpperCase(),
+      event_date: EVENT_DATE,
+      qr_image:   qrImage,    // base64 QR — use {{qr_image}} in template as <img src="{{qr_image}}">
+      pass_image: passImage   // base64 full pass card
+    });
+    statusEl.innerHTML = `<span class="email-sent">✅ Pass emailed to ${email}</span>`;
+    toast(`📧 Pass emailed to ${email}`, 'info');
+  } catch(e) {
+    console.error('EmailJS error:', e);
+    // Graceful fallback — mailto pre-filled
     const subject = encodeURIComponent(`Freshers Party 2026 — Your Entry Pass ${passID}`);
     const body = encodeURIComponent(
 `Dear ${name},
 
-Your payment has been successfully recorded. Please find your entry pass details below.
+Your payment has been confirmed. Here are your pass details:
 
-━━━━━━━━━━━━━━━━━━━━━━━━
-   FRESHERS PARTY 2026
-   ENTRY PASS
-━━━━━━━━━━━━━━━━━━━━━━━━
-
+━━━━━━━━━━━━━━━━━━━━
+  FRESHERS PARTY 2026
+  ENTRY PASS
+━━━━━━━━━━━━━━━━━━━━
 Name       : ${name}
 Year       : ${year}
 Department : ${dept}
 Pass ID    : ${passID}
-Amount Paid: ₹${amount}
+Amount     : ₹${amount}
 Payment    : ${mode.toUpperCase()}
 Event Date : ${EVENT_DATE}
+━━━━━━━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━━━━━━━━━━━
-Please present this Pass ID at the entry gate.
-Your QR code will be scanned for verification.
-Entry is valid for ONE person only.
-Bring your College ID along with this pass.
-━━━━━━━━━━━━━━━━━━━━━━━━
+Present your Pass ID at the entry gate.
+Your QR will be scanned for verification.
+Bring your College ID — valid for ONE entry only.
 
-Freshers Party 2026 — Event Coordination Team`);
+— FP2026 Event Coordination Team`);
     statusEl.innerHTML = `<span class="email-sent">📧 <a href="mailto:${email}?subject=${subject}&body=${body}" target="_blank" style="color:var(--blue)">Click to send email manually</a></span>`;
-    return;
-  }
-
-  // EmailJS configured
-  try {
-    emailjs.init(EMAILJS_KEY);
-    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-      to_email:  email,
-      to_name:   name,
-      pass_id:   passID,
-      year:      year,
-      dept:      dept,
-      amount:    `₹${amount}`,
-      mode:      mode.toUpperCase(),
-      event_date: EVENT_DATE
-    });
-    statusEl.innerHTML = `<span class="email-sent">✅ Email sent to ${email}</span>`;
-    toast(`📧 Email sent to ${email}`,'info');
-  } catch(e) {
-    statusEl.innerHTML = `<span style="color:var(--red);font-size:12px">⚠️ Email failed: ${e.text||e.message}</span>`;
+    toast('⚠️ Auto-email failed — use manual link', 'warn');
   }
 }
 
