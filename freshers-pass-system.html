@@ -9,8 +9,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <!-- EmailJS for auto email -->
-<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-<script>(function(){ emailjs.init("9YFh5zFapIlH2-Xmc"); })();</script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script>
+  window.addEventListener('load', function() {
+    emailjs.init({
+      publicKey: "9YFh5zFapIlH2-Xmc",
+      blockHeadless: false,
+      limitRate: { throttle: 2000 }
+    });
+    console.log("EmailJS initialized");
+  });
+</script>
 <style>
 :root{
   --gold:#F5C842;--gold-dark:#C9A227;
@@ -598,7 +607,7 @@ import { initializeApp }
 import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc,
          updateDoc, onSnapshot, query, orderBy, getDocs, getDoc, Timestamp, where }
   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider,
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider,
          signInWithEmailAndPassword, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
@@ -708,11 +717,13 @@ window.doBypassLogin = async () => {
   }
 };
 
-// ══ GOOGLE SIGN IN ══
+// ══ GOOGLE SIGN IN — use redirect to avoid CORS/popup issues ══
 window.doGoogleSignIn = async () => {
   try {
-    setLoad('Opening Google…'); document.getElementById('loading-screen').style.display='flex';
-    await signInWithPopup(auth, gProv);
+    setLoad('Redirecting to Google…');
+    document.getElementById('loading-screen').style.display='flex';
+    await signInWithRedirect(auth, gProv);
+    // page will redirect and come back — onAuthStateChanged handles the rest
   } catch(e) {
     document.getElementById('loading-screen').style.display='none';
     toast('Sign-in failed: '+e.message,'error');
@@ -739,6 +750,12 @@ async function getAccessLevel(email) {
 }
 
 // ══ AUTH STATE ══
+// Handle redirect result first (after Google redirect login)
+getRedirectResult(auth).catch(e => {
+  console.error('Redirect error:', e.message);
+  document.getElementById('loading-screen').style.display='none';
+});
+
 onAuthStateChanged(auth, async user => {
   if (!user) {
     document.getElementById('loading-screen').style.display='none';
@@ -749,7 +766,20 @@ onAuthStateChanged(auth, async user => {
   }
   setLoad('Checking authorization…');
   document.getElementById('loading-screen').style.display='flex';
-  const level = await getAccessLevel(user.email);
+
+  // Master always allowed — no Firestore call needed
+  let level = null;
+  if (user.email === MASTER_EMAIL || user.email === BYPASS_EMAIL) {
+    level = 'master';
+  } else {
+    try {
+      const v = await getDoc(doc(db,'volunteers', user.email));
+      if (v.exists() && v.data().active !== false) level = 'volunteer';
+    } catch(e) {
+      console.warn('Volunteer check failed:', e.message);
+    }
+  }
+
   if (!level) {
     await signOut(auth);
     document.getElementById('loading-screen').style.display='none';
@@ -795,30 +825,41 @@ function showDenied(email, name) {
 function subscribeAll() {
   // Passes
   if (unsubPasses) unsubPasses();
-  unsubPasses = onSnapshot(query(collection(db,'passes'),orderBy('generatedAt','desc')), snap=>{
-    passes=[];
-    snap.forEach(d=>{ const data=d.data(); if(data.passID) passes.push({fid:d.id,...data}); });
-    updateAllStats();
-    if (document.getElementById('page-records').classList.contains('active')) renderRecords();
-    if (document.getElementById('page-analytics').classList.contains('active')) renderAnalytics();
-    renderAnalytics(); // always update analytics live
-    updateLiveCounter();
-  });
-  // Volunteers
-  if (unsubVols) unsubVols();
-  unsubVols = onSnapshot(collection(db,'volunteers'), snap=>{
-    volunteers=[];
-    snap.forEach(d=>volunteers.push({fid:d.id,email:d.id,...d.data()}));
-    if (document.getElementById('page-volunteers').classList.contains('active')) renderVolunteers();
-  });
+  unsubPasses = onSnapshot(
+    query(collection(db,'passes'),orderBy('generatedAt','desc')),
+    snap=>{
+      passes=[];
+      snap.forEach(d=>{ const data=d.data(); if(data.passID) passes.push({fid:d.id,...data}); });
+      updateAllStats();
+      if (document.getElementById('page-records').classList.contains('active')) renderRecords();
+      renderAnalytics();
+      updateLiveCounter();
+    },
+    err=>{ console.warn('passes listener:', err.message); toast('Firestore: fix security rules — see instructions below','error'); }
+  );
+  // Volunteers — only subscribe if master
+  if (currentRole === 'master') {
+    if (unsubVols) unsubVols();
+    unsubVols = onSnapshot(collection(db,'volunteers'),
+      snap=>{
+        volunteers=[];
+        snap.forEach(d=>volunteers.push({fid:d.id,email:d.id,...d.data()}));
+        if (document.getElementById('page-volunteers').classList.contains('active')) renderVolunteers();
+      },
+      err=>{ console.warn('volunteers listener:', err.message); }
+    );
+  }
   // Fake attempts
   if (unsubFakes) unsubFakes();
-  unsubFakes = onSnapshot(collection(db,'fakeAttempts'), snap=>{
-    fakeAttempts=[];
-    snap.forEach(d=>fakeAttempts.push({fid:d.id,...d.data()}));
-    updateAllStats();
-    if (document.getElementById('page-analytics').classList.contains('active')) renderAnalytics();
-  });
+  unsubFakes = onSnapshot(collection(db,'fakeAttempts'),
+    snap=>{
+      fakeAttempts=[];
+      snap.forEach(d=>fakeAttempts.push({fid:d.id,...d.data()}));
+      updateAllStats();
+      if (document.getElementById('page-analytics').classList.contains('active')) renderAnalytics();
+    },
+    err=>{ console.warn('fakeAttempts listener:', err.message); }
+  );
 }
 
 // ══ PAGE NAV ══
@@ -965,33 +1006,40 @@ window.generatePass = async () => {
 // ══ EMAIL — EmailJS v3 with QR image ══
 async function sendPassEmail(email, name, year, dept, passID, amount, mode) {
   const statusEl = document.getElementById('email-status');
-  statusEl.innerHTML = `<span class="email-sending">⏳ Sending email to ${email}…</span>`;
+  statusEl.innerHTML = `<span class="email-sending">⏳ Sending pass to ${email}…</span>`;
 
-  // Wait a moment for QR canvas to render
-  await new Promise(r => setTimeout(r, 600));
+  // Wait for QR canvas to render
+  await new Promise(r => setTimeout(r, 800));
 
-  // Capture QR code as base64 image from the rendered canvas
+  // Capture QR code canvas → base64
   let qrImage = '';
   try {
     const qk = passID.replace(/[^a-z0-9]/gi,'_');
     const qrBox = document.getElementById(`qrbox_${qk}`);
     const canvas = qrBox ? qrBox.querySelector('canvas') : null;
     if (canvas) qrImage = canvas.toDataURL('image/png');
-  } catch(e) { console.warn('QR capture failed', e); }
+  } catch(e) { console.warn('QR capture:', e); }
 
-  // Capture full pass card as base64
+  // Capture full pass card → base64
   let passImage = '';
   try {
     const passEl = document.getElementById('printable-pass');
-    if (passEl && window.html2canvas) {
-      const c = await html2canvas(passEl, { backgroundColor:'#0f0f1a', scale:2, useCORS:true });
+    if (passEl) {
+      const c = await window.html2canvas(passEl, { backgroundColor:'#0f0f1a', scale:2, useCORS:true, logging:false });
       passImage = c.toDataURL('image/png');
     }
-  } catch(e) { console.warn('Pass image capture failed', e); }
+  } catch(e) { console.warn('Pass image capture:', e); }
+
+  // window.emailjs — access as global (EmailJS v3 loaded via <script> tag)
+  const ejs = window.emailjs;
+  if (!ejs) {
+    statusEl.innerHTML = `<span style="color:var(--red);font-size:12px">⚠️ EmailJS not loaded — refresh page</span>`;
+    return;
+  }
 
   try {
-    emailjs.init(EMAILJS_KEY);
-    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+    // Send via EmailJS browser SDK
+    const response = await ejs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
       to_email:   email,
       to_name:    name,
       pass_id:    passID,
@@ -1000,19 +1048,20 @@ async function sendPassEmail(email, name, year, dept, passID, amount, mode) {
       amount:     `₹${amount}`,
       mode:       mode.toUpperCase(),
       event_date: EVENT_DATE,
-      qr_image:   qrImage,    // base64 QR — use {{qr_image}} in template as <img src="{{qr_image}}">
-      pass_image: passImage   // base64 full pass card
+      qr_image:   qrImage,
+      pass_image: passImage
     });
-    statusEl.innerHTML = `<span class="email-sent">✅ Pass emailed to ${email}</span>`;
+    console.log('EmailJS response:', response.status, response.text);
+    statusEl.innerHTML = `<span class="email-sent">✅ Pass emailed to ${email} 📧</span>`;
     toast(`📧 Pass emailed to ${email}`, 'info');
   } catch(e) {
     console.error('EmailJS error:', e);
-    // Graceful fallback — mailto pre-filled
+    // Fallback to mailto
     const subject = encodeURIComponent(`Freshers Party 2026 — Your Entry Pass ${passID}`);
     const body = encodeURIComponent(
 `Dear ${name},
 
-Your payment has been confirmed. Here are your pass details:
+Your payment has been confirmed. Your pass details:
 
 ━━━━━━━━━━━━━━━━━━━━
   FRESHERS PARTY 2026
@@ -1027,13 +1076,13 @@ Payment    : ${mode.toUpperCase()}
 Event Date : ${EVENT_DATE}
 ━━━━━━━━━━━━━━━━━━━━
 
-Present your Pass ID at the entry gate.
+Show this Pass ID at the entry gate.
 Your QR will be scanned for verification.
-Bring your College ID — valid for ONE entry only.
+Bring your College ID. Valid for ONE entry only.
 
 — FP2026 Event Coordination Team`);
-    statusEl.innerHTML = `<span class="email-sent">📧 <a href="mailto:${email}?subject=${subject}&body=${body}" target="_blank" style="color:var(--blue)">Click to send email manually</a></span>`;
-    toast('⚠️ Auto-email failed — use manual link', 'warn');
+    statusEl.innerHTML = `<span class="email-sent">📧 <a href="mailto:${email}?subject=${subject}&body=${body}" target="_blank" style="color:var(--blue)">Click to send manually</a> (auto failed: ${e.text||e.message})</span>`;
+    toast('⚠️ Auto-email failed — manual link ready', 'warn');
   }
 }
 
