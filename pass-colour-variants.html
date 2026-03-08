@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FP2026 — Pass Colour Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: #04040a;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 40px 80px;
+  gap: 56px;
+}
+body::after {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+.section { display:flex; flex-direction:column; align-items:flex-start; gap:14px; width:100%; max-width:820px; }
+.variant-tag { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:4px; text-transform:uppercase; color:rgba(255,255,255,.18); padding-left:2px; }
+
+/* ═══ TICKET SHELL ═══ */
+.ticket-shell {
+  width:100%; max-width:820px; height:230px;
+  display:flex; border-radius:12px;
+  position:relative; overflow:visible;
+  transition:transform .3s ease, filter .3s ease;
+}
+.ticket-shell:hover { transform:translateY(-4px) scale(1.007); }
+/* punch holes */
+.ticket-shell::before, .ticket-shell::after {
+  content:''; position:absolute;
+  width:26px; height:26px; background:#04040a;
+  border-radius:50%; right:148px; z-index:10;
+}
+.ticket-shell::before { top:-13px; }
+.ticket-shell::after  { bottom:-13px; }
+
+/* LEFT art panel */
+.t-art {
+  width:310px; flex-shrink:0;
+  border-radius:12px 0 0 12px;
+  position:relative; overflow:hidden;
+  display:flex; flex-direction:column;
+  justify-content:flex-end; padding:20px 22px;
+}
+/* starfield */
+.t-art::before {
+  content:''; position:absolute; inset:0; z-index:1;
+  background-image:
+    radial-gradient(circle,rgba(255,255,255,.75) 1px,transparent 1px),
+    radial-gradient(circle,rgba(255,255,255,.5) 1px,transparent 1px),
+    radial-gradient(circle,rgba(255,255,255,.55) 1px,transparent 1px);
+  background-size:80px 80px, 53px 53px, 97px 97px;
+  background-position:0 0, 27px 14px, 51px 38px;
+  animation:drift 40s linear infinite;
+}
+@keyframes drift { from{background-position:0 0,27px 14px,51px 38px} to{background-position:80px 80px,107px 67px,148px 135px} }
+/* inset border */
+.t-art::after {
+  content:''; position:absolute; inset:10px; z-index:2;
+  border:1px solid rgba(255,255,255,.15); border-radius:6px; pointer-events:none;
+}
+.t-art-content { position:relative; z-index:3; display:flex; flex-direction:column; gap:0; }
+.t-college-name { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:5px; color:rgba(255,255,255,.5); margin-bottom:4px; }
+.t-tagline {
+  font-family:'DM Mono',monospace; font-style:italic; font-size:9px;
+  color:rgba(255,255,255,.35); letter-spacing:1px; margin-bottom:10px;
+  display:flex; align-items:center; gap:6px;
+}
+.t-tagline::before, .t-tagline::after { content:''; display:inline-block; width:22px; height:1px; background:rgba(255,255,255,.25); }
+.t-fresh { font-family:'Bebas Neue',sans-serif; font-size:58px; line-height:.92; letter-spacing:2px; color:#fff; }
+.t-party { font-family:'Bebas Neue',sans-serif; font-size:38px; letter-spacing:10px; color:rgba(255,255,255,.9); line-height:1; }
+.t-year-stamp { position:absolute; top:16px; right:18px; z-index:3; font-family:'Bebas Neue',sans-serif; font-size:42px; letter-spacing:-1px; line-height:1; opacity:.15; color:#fff; }
+
+/* PERFORATED divider */
+.t-perf { width:1px; flex-shrink:0; position:relative; z-index:5; }
+
+/* MIDDLE info */
+.t-info {
+  flex:1; position:relative; overflow:hidden;
+  padding:20px 22px;
+  display:flex; flex-direction:column; justify-content:space-between;
+}
+.t-info::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:radial-gradient(circle,rgba(255,255,255,.35) 1px,transparent 1px);
+  background-size:60px 60px; opacity:.25;
+}
+.t-date-main { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:1px; color:#fff; line-height:1; }
+.t-date-sub  { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,.3); margin-top:3px; }
+.t-att-lbl   { font-family:'DM Mono',monospace; font-size:7.5px; letter-spacing:2.5px; text-transform:uppercase; color:rgba(255,255,255,.28); margin-bottom:3px; }
+.t-att-name  { font-family:'Outfit',sans-serif; font-weight:700; font-size:18px; color:#fff; letter-spacing:-.3px; }
+.t-meta-row  { display:flex; gap:20px; align-items:flex-end; }
+.t-meta-lbl  { font-family:'DM Mono',monospace; font-size:7px; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.25); margin-bottom:2px; }
+.t-meta-val  { font-family:'Outfit',sans-serif; font-weight:600; font-size:12px; color:rgba(255,255,255,.82); }
+.t-footer-row { display:flex; align-items:center; justify-content:space-between; }
+.t-footer-note { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:rgba(255,255,255,.18); }
+.t-valid-pill { display:flex; align-items:center; gap:5px; font-family:'DM Mono',monospace; font-size:9px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; padding:4px 10px; border-radius:30px; }
+.vdot { width:5px; height:5px; border-radius:50%; animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.85)} }
+
+/* RIGHT stub */
+.t-stub {
+  width:150px; flex-shrink:0; border-radius:0 12px 12px 0;
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:space-between; padding:14px 12px;
+  position:relative; overflow:hidden;
+}
+.t-stub-vert { position:absolute; right:7px; top:50%; transform:translateY(-50%) rotate(90deg); font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:5px; white-space:nowrap; color:rgba(255,255,255,.1); }
+.stub-scan-lbl { font-family:'DM Mono',monospace; font-size:7px; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,.25); text-align:center; }
+.stub-qr { background:#fff; padding:5px; border-radius:6px; }
+.stub-pid { font-family:'DM Mono',monospace; font-size:11px; font-weight:500; text-align:center; letter-spacing:.5px; }
+.stub-bc-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.stub-bc-svg { width:114px; height:26px; }
+.stub-bc-serial { font-family:'DM Mono',monospace; font-size:6.5px; letter-spacing:1.5px; color:rgba(255,255,255,.18); }
+.stub-note { font-family:'DM Mono',monospace; font-size:7px; text-transform:uppercase; letter-spacing:1px; color:rgba(255,255,255,.2); text-align:center; line-height:1.6; }
+
+/* ════ THEMES ════ */
+
+/* 1 BLUE */
+.v-blue .t-art { background: radial-gradient(ellipse at 18% 72%,rgba(37,99,235,.72) 0%,transparent 55%), radial-gradient(ellipse at 82% 18%,rgba(99,102,241,.5) 0%,transparent 50%), linear-gradient(155deg,#050d1f 0%,#0a1535 55%,#060e22 100%); }
+.v-blue .t-perf { background:repeating-linear-gradient(to bottom,transparent 0,transparent 6px,rgba(96,165,250,.22) 6px,rgba(96,165,250,.22) 10px); }
+.v-blue .t-info { background:radial-gradient(ellipse at 88% 10%,rgba(37,99,235,.08) 0%,transparent 50%),rgba(2,6,20,.7); }
+.v-blue .t-stub { background:rgba(2,6,20,.82); }
+.v-blue .t-fresh em,.v-blue .t-date-main em { color:#60A5FA; font-style:normal; }
+.v-blue .stub-pid { color:#60A5FA; }
+.v-blue .t-valid-pill { color:#60A5FA; background:rgba(96,165,250,.1); border:1px solid rgba(96,165,250,.28); }
+.v-blue .vdot { background:#60A5FA; box-shadow:0 0 8px #60A5FA; }
+.v-blue .stub-qr { border:2px solid rgba(96,165,250,.35); }
+
+/* 2 PINK */
+.v-pink .t-art { background: radial-gradient(ellipse at 15% 74%,rgba(219,39,119,.72) 0%,transparent 55%), radial-gradient(ellipse at 80% 18%,rgba(168,85,247,.5) 0%,transparent 50%), linear-gradient(155deg,#150510 0%,#200a1e 55%,#0f0410 100%); }
+.v-pink .t-perf { background:repeating-linear-gradient(to bottom,transparent 0,transparent 6px,rgba(244,114,182,.22) 6px,rgba(244,114,182,.22) 10px); }
+.v-pink .t-info { background:radial-gradient(ellipse at 88% 10%,rgba(219,39,119,.07) 0%,transparent 50%),rgba(12,3,12,.7); }
+.v-pink .t-stub { background:rgba(12,3,12,.82); }
+.v-pink .t-fresh em,.v-pink .t-date-main em { color:#F472B6; font-style:normal; }
+.v-pink .stub-pid { color:#F472B6; }
+.v-pink .t-valid-pill { color:#F472B6; background:rgba(244,114,182,.1); border:1px solid rgba(244,114,182,.28); }
+.v-pink .vdot { background:#F472B6; box-shadow:0 0 8px #F472B6; }
+.v-pink .stub-qr { border:2px solid rgba(244,114,182,.35); }
+
+/* 3 PURPLE */
+.v-purple .t-art { background: radial-gradient(ellipse at 18% 72%,rgba(124,58,237,.76) 0%,transparent 55%), radial-gradient(ellipse at 82% 18%,rgba(167,139,250,.4) 0%,transparent 50%), linear-gradient(155deg,#08031a 0%,#100520 55%,#06020f 100%); }
+.v-purple .t-perf { background:repeating-linear-gradient(to bottom,transparent 0,transparent 6px,rgba(192,132,252,.22) 6px,rgba(192,132,252,.22) 10px); }
+.v-purple .t-info { background:radial-gradient(ellipse at 88% 10%,rgba(124,58,237,.08) 0%,transparent 50%),rgba(5,2,14,.7); }
+.v-purple .t-stub { background:rgba(5,2,14,.82); }
+.v-purple .t-fresh em,.v-purple .t-date-main em { color:#C084FC; font-style:normal; }
+.v-purple .stub-pid { color:#C084FC; }
+.v-purple .t-valid-pill { color:#C084FC; background:rgba(192,132,252,.1); border:1px solid rgba(192,132,252,.28); }
+.v-purple .vdot { background:#C084FC; box-shadow:0 0 8px #C084FC; }
+.v-purple .stub-qr { border:2px solid rgba(192,132,252,.35); }
+
+/* 4 GOLD */
+.v-gold .t-art { background: radial-gradient(ellipse at 18% 72%,rgba(180,130,0,.65) 0%,transparent 55%), radial-gradient(ellipse at 82% 18%,rgba(245,200,66,.22) 0%,transparent 50%), linear-gradient(155deg,#100900 0%,#1c1000 55%,#0a0600 100%); }
+.v-gold .t-perf { background:repeating-linear-gradient(to bottom,transparent 0,transparent 6px,rgba(245,200,66,.22) 6px,rgba(245,200,66,.22) 10px); }
+.v-gold .t-info { background:radial-gradient(ellipse at 88% 10%,rgba(180,130,0,.07) 0%,transparent 50%),rgba(8,5,0,.7); }
+.v-gold .t-stub { background:rgba(8,5,0,.82); }
+.v-gold .t-fresh em,.v-gold .t-date-main em { color:#F5C842; font-style:normal; }
+.v-gold .stub-pid { color:#F5C842; }
+.v-gold .t-valid-pill { color:#F5C842; background:rgba(245,200,66,.1); border:1px solid rgba(245,200,66,.28); }
+.v-gold .vdot { background:#F5C842; box-shadow:0 0 8px #F5C842; }
+.v-gold .stub-qr { border:2px solid rgba(245,200,66,.35); }
+
+.page-footer { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:3px; color:rgba(255,255,255,.1); text-transform:uppercase; text-align:center; padding-top:10px; }
+</style>
+</head>
+<body>
+
+<!-- ① BLUE × BLACK -->
+<div class="section">
+  <div class="variant-tag">① Blue × Black — Electric Night</div>
+  <div class="ticket-shell v-blue" style="filter:drop-shadow(0 20px 55px rgba(37,99,235,.38)) drop-shadow(0 4px 14px rgba(0,0,0,.9))">
+    <div class="t-art">
+      <div class="t-year-stamp">2026</div>
+      <div class="t-art-content">
+        <div class="t-college-name">Your College Name</div>
+        <div class="t-tagline">The Night Of New Beginnings</div>
+        <div><div class="t-fresh">FRESH<em>ER'S</em></div><div class="t-party">PARTY</div></div>
+      </div>
+    </div>
+    <div class="t-perf"></div>
+    <div class="t-info">
+      <div><div class="t-date-main"><em>08 MARCH</em> 2026</div><div class="t-date-sub">Unlimited Food &nbsp;|&nbsp; Fun &nbsp;|&nbsp; Masti</div></div>
+      <div><div class="t-att-lbl">Attendee</div><div class="t-att-name">Vibhor Shrivastava</div></div>
+      <div class="t-meta-row">
+        <div><div class="t-meta-lbl">Dept</div><div class="t-meta-val">CSE</div></div>
+        <div><div class="t-meta-lbl">Year</div><div class="t-meta-val">2nd</div></div>
+        <div><div class="t-meta-lbl">Paid</div><div class="t-meta-val">₹1000</div></div>
+        <div><div class="t-meta-lbl">Mode</div><div class="t-meta-val">UPI</div></div>
+      </div>
+      <div class="t-footer-row">
+        <div class="t-footer-note">Bring College ID · One Entry Only</div>
+        <div class="t-valid-pill"><span class="vdot"></span>VALID</div>
+      </div>
+    </div>
+    <div class="t-perf"></div>
+    <div class="t-stub">
+      <div class="stub-scan-lbl">Scan at Gate</div>
+      <div class="stub-qr" id="qr1"></div>
+      <div class="stub-pid">FP2026-042</div>
+      <div class="stub-bc-wrap"><svg class="stub-bc-svg" viewBox="0 0 114 26" id="bc1"></svg><div class="stub-bc-serial">042 · FP · 2026</div></div>
+      <div class="stub-note">Entry Pass</div>
+      <div class="t-stub-vert">ENTRY PASS</div>
+    </div>
+  </div>
+</div>
+
+<!-- ② PINK × BLACK -->
+<div class="section">
+  <div class="variant-tag">② Pink × Black — Neon Blossom</div>
+  <div class="ticket-shell v-pink" style="filter:drop-shadow(0 20px 55px rgba(219,39,119,.38)) drop-shadow(0 4px 14px rgba(0,0,0,.9))">
+    <div class="t-art">
+      <div class="t-year-stamp">2026</div>
+      <div class="t-art-content">
+        <div class="t-college-name">Your College Name</div>
+        <div class="t-tagline">The Night Of New Beginnings</div>
+        <div><div class="t-fresh">FRESH<em>ER'S</em></div><div class="t-party">PARTY</div></div>
+      </div>
+    </div>
+    <div class="t-perf"></div>
+    <div class="t-info">
+      <div><div class="t-date-main"><em>08 MARCH</em> 2026</div><div class="t-date-sub">Unlimited Food &nbsp;|&nbsp; Fun &nbsp;|&nbsp; Masti</div></div>
+      <div><div class="t-att-lbl">Attendee</div><div class="t-att-name">Vibhor Shrivastava</div></div>
+      <div class="t-meta-row">
+        <div><div class="t-meta-lbl">Dept</div><div class="t-meta-val">CSE</div></div>
+        <div><div class="t-meta-lbl">Year</div><div class="t-meta-val">2nd</div></div>
+        <div><div class="t-meta-lbl">Paid</div><div class="t-meta-val">₹1000</div></div>
+        <div><div class="t-meta-lbl">Mode</div><div class="t-meta-val">UPI</div></div>
+      </div>
+      <div class="t-footer-row">
+        <div class="t-footer-note">Bring College ID · One Entry Only</div>
+        <div class="t-valid-pill"><span class="vdot"></span>VALID</div>
+      </div>
+    </div>
+    <div class="t-perf"></div>
+    <div class="t-stub">
+      <div class="stub-scan-lbl">Scan at Gate</div>
+      <div class="stub-qr" id="qr2"></div>
+      <div class="stub-pid">FP2026-042</div>
+      <div class="stub-bc-wrap"><svg class="stub-bc-svg" viewBox="0 0 114 26" id="bc2"></svg><div class="stub-bc-serial">042 · FP · 2026</div></div>
+      <div class="stub-note">Entry Pass</div>
+      <div class="t-stub-vert">ENTRY PASS</div>
+    </div>
+  </div>
+</div>
+
+<!-- ③ PURPLE × BLACK -->
+<div class="section">
+  <div class="variant-tag">③ Midnight Purple × Black — Cosmic Glow</div>
+  <div class="ticket-shell v-purple" style="filter:drop-shadow(0 20px 55px rgba(124,58,237,.38)) drop-shadow(0 4px 14px rgba(0,0,0,.9))">
+    <div class="t-art">
+      <div class="t-year-stamp">2026</div>
+      <div class="t-art-content">
+        <div class="t-college-name">Your College Name</div>
+        <div class="t-tagline">The Night Of New Beginnings</div>
+        <div><div class="t-fresh">FRESH<em>ER'S</em></div><div class="t-party">PARTY</div></div>
+      </div>
+    </div>
+    <div class="t-perf"></div>
+    <div class="t-info">
+      <div><div class="t-date-main"><em>08 MARCH</em> 2026</div><div class="t-date-sub">Unlimited Food &nbsp;|&nbsp; Fun &nbsp;|&nbsp; Masti</div></div>
+      <div><div class="t-att-lbl">Attendee</div><div class="t-att-name">Vibhor Shrivastava</div></div>
+      <div class="t-meta-row">
+        <div><div class="t-meta-lbl">Dept</div><div class="t-meta-val">CSE</div></div>
+        <div><div class="t-meta-lbl">Year</div><div class="t-meta-val">2nd</div></div>
+        <div><div class="t-meta-lbl">Paid</div><div class="t-meta-val">₹1000</div></div>
+        <div><div class="t-meta-lbl">Mode</div><div class="t-meta-val">UPI</div></div>
+      </div>
+      <div class="t-footer-row">
+        <div class="t-footer-note">Bring College ID · One Entry Only</div>
+        <div class="t-valid-pill"><span class="vdot"></span>VALID</div>
+      </div>
+    </div>
+    <div class="t-perf"></div>
+    <div class="t-stub">
+      <div class="stub-scan-lbl">Scan at Gate</div>
+      <div class="stub-qr" id="qr3"></div>
+      <div class="stub-pid">FP2026-042</div>
+      <div class="stub-bc-wrap"><svg class="stub-bc-svg" viewBox="0 0 114 26" id="bc3"></svg><div class="stub-bc-serial">042 · FP · 2026</div></div>
+      <div class="stub-note">Entry Pass</div>
+      <div class="t-stub-vert">ENTRY PASS</div>
+    </div>
+  </div>
+</div>
+
+<!-- ④ GOLD × BLACK -->
+<div class="section">
+  <div class="variant-tag">④ Golden × Black — Royal Night</div>
+  <div class="ticket-shell v-gold" style="filter:drop-shadow(0 20px 55px rgba(180,130,0,.32)) drop-shadow(0 4px 14px rgba(0,0,0,.9))">
+    <div class="t-art">
+      <div class="t-year-stamp">2026</div>
+      <div class="t-art-content">
+        <div class="t-college-name">Your College Name</div>
+        <div class="t-tagline">The Night Of New Beginnings</div>
+        <div><div class="t-fresh">FRESH<em>ER'S</em></div><div class="t-party">PARTY</div></div>
+      </div>
+    </div>
+    <div class="t-perf"></div>
+    <div class="t-info">
+      <div><div class="t-date-main"><em>08 MARCH</em> 2026</div><div class="t-date-sub">Unlimited Food &nbsp;|&nbsp; Fun &nbsp;|&nbsp; Masti</div></div>
+      <div><div class="t-att-lbl">Attendee</div><div class="t-att-name">Vibhor Shrivastava</div></div>
+      <div class="t-meta-row">
+        <div><div class="t-meta-lbl">Dept</div><div class="t-meta-val">CSE</div></div>
+        <div><div class="t-meta-lbl">Year</div><div class="t-meta-val">2nd</div></div>
+        <div><div class="t-meta-lbl">Paid</div><div class="t-meta-val">₹1000</div></div>
+        <div><div class="t-meta-lbl">Mode</div><div class="t-meta-val">UPI</div></div>
+      </div>
+      <div class="t-footer-row">
+        <div class="t-footer-note">Bring College ID · One Entry Only</div>
+        <div class="t-valid-pill"><span class="vdot"></span>VALID</div>
+      </div>
+    </div>
+    <div class="t-perf"></div>
+    <div class="t-stub">
+      <div class="stub-scan-lbl">Scan at Gate</div>
+      <div class="stub-qr" id="qr4"></div>
+      <div class="stub-pid">FP2026-042</div>
+      <div class="stub-bc-wrap"><svg class="stub-bc-svg" viewBox="0 0 114 26" id="bc4"></svg><div class="stub-bc-serial">042 · FP · 2026</div></div>
+      <div class="stub-note">Entry Pass</div>
+      <div class="t-stub-vert">ENTRY PASS</div>
+    </div>
+  </div>
+</div>
+
+<div class="page-footer">Sample only · not in system · tell me which one to implement →</div>
+
+<script>
+['qr1','qr2','qr3','qr4'].forEach(id => {
+  new QRCode(document.getElementById(id), {
+    text:'FP2026-042:XK8M2PQRST', width:82, height:82,
+    colorDark:'#000', colorLight:'#fff'
+  });
+});
+
+const BC_COLORS = ['rgba(96,165,250,.75)','rgba(244,114,182,.75)','rgba(192,132,252,.75)','rgba(245,200,66,.75)'];
+const WIDTHS = [3,1,2,1,1,3,1,2,1,2,2,1,3,1,1,2,1,3,2,1,1,2,3,1,2,1,1,2,1,3,2,1,1,3,1,2,1,1,2,1];
+const TOTAL  = WIDTHS.reduce((a,b)=>a+b,0);
+
+['bc1','bc2','bc3','bc4'].forEach((id, ti) => {
+  const svg = document.getElementById(id);
+  const color = BC_COLORS[ti];
+  let x = 0;
+  WIDTHS.forEach((w, i) => {
+    if (i % 2 === 0) {
+      const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      r.setAttribute('x',  (x/TOTAL)*114);
+      r.setAttribute('y',  '0');
+      r.setAttribute('width', Math.max((w/TOTAL)*114 - 0.6, 0.9));
+      r.setAttribute('height','26');
+      r.setAttribute('fill', color);
+      r.setAttribute('rx','0.4');
+      svg.appendChild(r);
+    }
+    x += w;
+  });
+});
+</script>
+</body>
+</html>
