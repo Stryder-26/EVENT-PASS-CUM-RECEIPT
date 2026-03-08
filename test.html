@@ -976,30 +976,29 @@ window.generatePass = async () => {
   btn.disabled = true; btn.textContent = '⏳ Saving…';
 
   try {
-    // ── Atomic counter — guarantees unique sequential Pass IDs ──
-    // Uses Firestore transaction on a counter doc. Safe even with multiple
-    // admins generating passes simultaneously — no clashes ever.
-    const counterRef = doc(db, 'meta', 'passCounter');
-    let newCount = 1;
+    // ── Smart gap-filling ID assignment ──
+    // 1. Build set of all existing pass IDs from live cache
+    // 2. Scan from 001 upward — use the FIRST gap found
+    // 3. If no gaps, use max+1
+    // 4. Atomic transaction updates counter to the highest assigned number
 
+    const counterRef = doc(db, 'meta', 'passCounter');
+    const existingIDs = new Set(passes.map(p => p.passID));
+
+    // Find lowest available number starting from 1
+    let newCount = 1;
+    while (existingIDs.has(pid(newCount))) {
+      newCount++;
+    }
+    const finalPassID = pid(newCount);
+
+    // Update counter to track highest used number (for reference)
     await runTransaction(db, async (tx) => {
       const counterDoc = await tx.get(counterRef);
-      if (counterDoc.exists()) {
-        newCount = (counterDoc.data().count || 0) + 1;
-      }
-      tx.set(counterRef, { count: newCount }, { merge: true });
+      const currentMax = counterDoc.exists() ? (counterDoc.data().count || 0) : 0;
+      // Store whichever is higher — keeps counter accurate
+      tx.set(counterRef, { count: Math.max(currentMax, newCount) }, { merge: true });
     });
-
-    const passID = pid(newCount);
-
-    // Double-check: if passID already exists (edge case), increment until free
-    let finalPassID = passID;
-    const existingIDs = new Set(passes.map(p => p.passID));
-    while (existingIDs.has(finalPassID)) {
-      newCount++;
-      finalPassID = pid(newCount);
-      await setDoc(counterRef, { count: newCount }, { merge: true });
-    }
 
     const token  = makeToken(finalPassID);
     const qrText = makeQRText(finalPassID, token);
