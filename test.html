@@ -371,7 +371,7 @@ tbody td{padding:10px 12px;color:var(--text);vertical-align:middle;}
       <!-- Form -->
       <div class="panel">
         <div class="panel-title"><div class="panel-tl">✏️ Student Details</div></div>
-        <div class="field"><label>Full Name *</label><input id="f-name" placeholder="e.g. Vibhor Sharma" oninput="updatePreview()"></div>
+        <div class="field"><label>Full Name *</label><input id="f-name" placeholder="e.g. Vibhor Shrivastava" oninput="updatePreview()"></div>
         <div class="field">
           <label>Year *</label>
           <select id="f-year" onchange="updatePreview()">
@@ -952,6 +952,11 @@ function makeQR(cid, text) {
 
 // ══ GENERATE PASS ══
 window.generatePass = async () => {
+  const btn = document.getElementById('gen-btn');
+
+  // ── Guard: prevent duplicate clicks — button stays locked until "↺ New Pass" ──
+  if (btn.disabled) return;
+
   const name   = document.getElementById('f-name').value.trim();
   const year   = document.getElementById('f-year').value;
   const dept   = document.getElementById('f-dept').value;
@@ -967,8 +972,8 @@ window.generatePass = async () => {
   if (!phone||phone.length!==10) return toast('Valid 10-digit phone required','error');
   if (!mode)  return toast('Select payment mode','error');
 
-  const btn=document.getElementById('gen-btn');
-  btn.disabled=true; btn.textContent='⏳ Saving…';
+  // Lock immediately — only resetForm() unlocks it
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
 
   try {
     // ── Atomic counter — guarantees unique sequential Pass IDs ──
@@ -1025,11 +1030,14 @@ window.generatePass = async () => {
     }
 
     toast(`✅ ${finalPassID} saved!`);
+    // Button stays LOCKED after success — user must click "↺ New Pass" to generate another
+    btn.textContent = '✅ Pass Generated';
   } catch(e) {
+    // On error, re-enable so user can retry
     toast('Error: '+e.message,'error');
     console.error(e);
-  } finally {
-    btn.disabled=false; btn.textContent='🎟️ Generate Pass';
+    btn.disabled = false;
+    btn.textContent = '🎟️ Generate Pass';
   }
 };
 
@@ -1286,15 +1294,28 @@ window.downloadPass = async () => {
 };
 
 window.resetForm = () => {
-  ['f-name','f-phone','f-email','f-txn'].forEach(id=>document.getElementById(id).value='');
-  ['f-year','f-dept','f-mode'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('f-amount').value='1000';
-  document.getElementById('upi-field').style.display='none';
-  document.getElementById('pass-action-btns').style.display='none';
-  document.getElementById('email-status').innerHTML='';
+  // Clear name and phone (key fields) + all other fields
+  ['f-name','f-phone','f-email','f-txn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['f-year','f-dept','f-mode'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-amount').value = '1000';
+  document.getElementById('upi-field').style.display = 'none';
+  document.getElementById('pass-action-btns').style.display = 'none';
+  document.getElementById('email-status').innerHTML = '';
   document.getElementById('email-tag').classList.remove('show');
-  document.getElementById('pass-preview-area').innerHTML=`<div class="pass-empty"><div class="pass-empty-icon">🎟️</div><div class="pass-empty-text">Fill student details<br>pass appears here.</div></div>`;
-  lastPass=null;
+  document.getElementById('pass-preview-area').innerHTML = `<div class="pass-empty"><div class="pass-empty-icon">🎟️</div><div class="pass-empty-text">Fill student details<br>pass appears here.</div></div>`;
+  lastPass = null;
+  // Re-enable generate button for new pass
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = false;
+  btn.textContent = '🎟️ Generate Pass';
+  // Focus on name field for quick entry
+  document.getElementById('f-name').focus();
 };
 
 // ══ SCANNER ══
