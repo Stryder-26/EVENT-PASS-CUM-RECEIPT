@@ -755,6 +755,7 @@ window.doSignOut = async () => {
   await signOut(auth);
   document.getElementById('main-nav').style.display='none';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-login').style.display='flex';
   document.getElementById('page-login').classList.add('active');
   document.getElementById('master-bypass').style.display='none';
   toast('Signed out');
@@ -774,6 +775,7 @@ onAuthStateChanged(auth, async user => {
     document.getElementById('loading-screen').style.display='none';
     document.getElementById('main-nav').style.display='none';
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page-login').style.display='flex';
     document.getElementById('page-login').classList.add('active');
     return;
   }
@@ -802,6 +804,8 @@ onAuthStateChanged(auth, async user => {
   currentRole = level; currentUser = user;
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('main-nav').style.display='flex';
+  // Hide login page completely once logged in
+  document.getElementById('page-login').style.display='none';
   document.getElementById('user-name').textContent = user.displayName?.split(' ')[0]||'Admin';
   document.getElementById('user-avatar').src = user.photoURL||'';
   const badge = document.getElementById('role-badge');
@@ -820,6 +824,7 @@ onAuthStateChanged(auth, async user => {
 function showDenied(email, name) {
   document.getElementById('main-nav').style.display='none';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-login').style.display='flex';
   document.getElementById('page-login').classList.add('active');
   document.querySelector('.login-card').innerHTML=`
     <div class="denied-wrap">
@@ -1300,27 +1305,22 @@ window.downloadPass = async () => {
 };
 
 window.resetForm = () => {
-  // Clear name and phone (key fields) + all other fields
+  // ── Clear only personal fields — keep dept/year/mode for rapid batch entry ──
   ['f-name','f-phone','f-email','f-txn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  ['f-year','f-dept','f-mode'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.getElementById('f-amount').value = '1000';
-  document.getElementById('upi-field').style.display = 'none';
+  // f-year, f-dept, f-mode, f-amount → KEPT as-is for next student
   document.getElementById('pass-action-btns').style.display = 'none';
   document.getElementById('email-status').innerHTML = '';
   document.getElementById('email-tag').classList.remove('show');
   document.getElementById('pass-preview-area').innerHTML = `<div class="pass-empty"><div class="pass-empty-icon">🎟️</div><div class="pass-empty-text">Fill student details<br>pass appears here.</div></div>`;
   lastPass = null;
-  // Re-enable generate button for new pass
+  // Re-enable generate button
   const btn = document.getElementById('gen-btn');
   btn.disabled = false;
   btn.textContent = '🎟️ Generate Pass';
-  // Focus on name field for quick entry
+  // Focus straight on name for next student
   document.getElementById('f-name').focus();
 };
 
