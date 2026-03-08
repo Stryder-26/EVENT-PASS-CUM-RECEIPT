@@ -608,7 +608,7 @@ import { getFirestore, collection, addDoc, doc, setDoc, deleteDoc,
          updateDoc, onSnapshot, query, orderBy, getDocs, getDoc, Timestamp, where,
          runTransaction, increment }
   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
-import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider,
+import { getAuth, signInWithPopup, GoogleAuthProvider,
          signInWithEmailAndPassword, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 
@@ -727,14 +727,25 @@ window.doBypassLogin = async () => {
 
 // ══ GOOGLE SIGN IN — use redirect to avoid CORS/popup issues ══
 window.doGoogleSignIn = async () => {
+  const loadEl = document.getElementById('loading-screen');
   try {
-    setLoad('Redirecting to Google…');
-    document.getElementById('loading-screen').style.display='flex';
-    await signInWithRedirect(auth, gProv);
-    // page will redirect and come back — onAuthStateChanged handles the rest
+    setLoad('Opening Google Sign-In…');
+    loadEl.style.display = 'flex';
+    const result = await signInWithPopup(auth, gProv);
+    // onAuthStateChanged fires automatically after this
+    console.log('Popup login success:', result.user.email);
   } catch(e) {
-    document.getElementById('loading-screen').style.display='none';
-    toast('Sign-in failed: '+e.message,'error');
+    loadEl.style.display = 'none';
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+      toast('Sign-in cancelled','error');
+    } else if (e.code === 'auth/popup-blocked') {
+      toast('Popup blocked by browser — allow popups for this site','error');
+    } else if (e.code === 'auth/unauthorized-domain') {
+      toast('Domain not authorized — add this domain in Firebase Console → Authentication → Settings → Authorized domains','error');
+    } else {
+      toast('Sign-in failed: ' + e.message, 'error');
+    }
+    console.error('Google sign-in error:', e.code, e.message);
   }
 };
 
@@ -758,12 +769,6 @@ async function getAccessLevel(email) {
 }
 
 // ══ AUTH STATE ══
-// Handle redirect result first (after Google redirect login)
-getRedirectResult(auth).catch(e => {
-  console.error('Redirect error:', e.message);
-  document.getElementById('loading-screen').style.display='none';
-});
-
 onAuthStateChanged(auth, async user => {
   if (!user) {
     document.getElementById('loading-screen').style.display='none';
@@ -1013,8 +1018,10 @@ window.generatePass = async () => {
       generatedAt: Timestamp.now()
     };
 
-    const ref = await addDoc(collection(db,'passes'), record);
-    lastPass = {...record, fid:ref.id, qrText};
+    // Use passID (e.g. FP2026-001) as the Firestore document ID — easy to track
+    const passDocRef = doc(db, 'passes', finalPassID);
+    await setDoc(passDocRef, record);
+    lastPass = {...record, fid:finalPassID, qrText};
 
     // Render pass with unique QR
     const qk = finalPassID.replace(/[^a-z0-9]/gi,'_');
