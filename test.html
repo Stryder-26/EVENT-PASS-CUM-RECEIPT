@@ -2,16 +2,34 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <link rel="icon" type="image/png" href="favicon.png">
-  <meta property="og:title"       content="Groovinn Eve 2026 — Entry Pass System">
-<meta property="og:description" content="Official pass management system for Groovinn Eve 2026.">
-<meta property="og:image"       content="https://YOUR_HOSTED_URL/preview.png">
-<meta property="og:url"         content="https://YOUR_HOSTED_URL">
-<meta property="og:type"        content="website">
-<meta name="theme-color"        content="#F5C842">
-  <meta property="og:image" content="https://via.placeholder.com/1200x630/0f0f1a/F5C842?text=Groovinn+Eve+2026">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Freshers Party 2026 – Pass System</title>
+<title>Groovinn Eve 2026 — Pass System</title>
+
+<!-- ── Favicon — works on GitHub Pages + Chrome ── -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%9F%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="favicon.png">
+
+<!-- ── Browser bar colour on Android Chrome ── -->
+<!-- ── Browser bar colour — works on Chrome Android ── -->
+<meta name="theme-color" content="#F5C842" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F5C842" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#F5C842">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Groovinn%20Eve%202026%22%2C%22short_name%22%3A%22GE2026%22%2C%22theme_color%22%3A%22%23F5C842%22%2C%22background_color%22%3A%22%230f0f1a%22%2C%22display%22%3A%22standalone%22%7D">
+
+<!-- ── WhatsApp / Social share preview ── -->
+<meta property="og:type"        content="website">
+<meta property="og:url"         content="https://stryder-26.github.io">
+<meta property="og:title"       content="Groovinn Eve 2026 — Entry Pass System">
+<meta property="og:description" content="Official digital pass management for Groovinn Eve 2026. Generate, scan and verify entry passes.">
+<meta property="og:image"       content="https://stryder-26.github.io/preview.png">
+<meta property="og:image:width"  content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card"       content="summary_large_image">
+<meta name="twitter:title"      content="Groovinn Eve 2026 — Entry Pass System">
+<meta name="twitter:image"      content="https://stryder-26.github.io/preview.png">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -733,7 +751,7 @@ window.doBypassLogin = async () => {
   }
 };
 
-// ══ GOOGLE SIGN IN — use redirect to avoid CORS/popup issues ══
+// ══ GOOGLE SIGN IN — popup based ══
 window.doGoogleSignIn = async () => {
   const loadEl = document.getElementById('loading-screen');
   try {
