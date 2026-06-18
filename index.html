@@ -316,9 +316,7 @@ tbody td{padding:10px 12px;color:var(--text);vertical-align:middle;}
   #printable-pass{position:fixed;top:0;left:0;}
 }
 
-}
-
-/* ══ AI ANALYTICS CHATBOT — THEME MATCHED ══ */
+/* ══ AI ANALYTICS CHATBOT ══ */
 .chatbot-wrap{position:fixed;bottom:20px;right:20px;z-index:9998;width:400px;max-width:calc(100vw - 40px);display:flex;flex-direction:column;transition:all .3s cubic-bezier(.4,0,.2,1);}
 .chatbot-wrap.collapsed{width:auto;}
 .chatbot-wrap.collapsed .chatbot-body{display:none;}
@@ -1713,8 +1711,6 @@ function renderVolunteers() {
 
 
 // ═══════════════════ AI ANALYTICS CHATBOT ENGINE ═══════════════════
-// Extracts specific fields from Firebase passes[] and summarizes via AI
-// Uses free OVHcloud AI endpoint (no signup, no API key) with local fallback
 
 const chatbotMessages = document.getElementById('chatbot-messages');
 const chatbotInput = document.getElementById('chatbot-input');
@@ -1732,15 +1728,9 @@ window.toggleChatbot = () => {
 
 function addChatbotMsg(text, isUser = false, isError = false) {
   const div = document.createElement('div');
-  div.className = `chatbot-msg ${isUser ? 'user' : 'ai'}`;
+  div.className = 'chatbot-msg ' + (isUser ? 'user' : 'ai');
   const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-  div.innerHTML = `
-    <div class="chatbot-msg-icon">${isUser ? '👤' : '🎯'}</div>
-    <div>
-      <div class="chatbot-msg-bubble">${isError ? `<div class="chatbot-error">${text}</div>` : text}</div>
-      <div class="chatbot-msg-time">${time}</div>
-    </div>
-  `;
+  div.innerHTML = '<div class="chatbot-msg-icon">' + (isUser ? '👤' : '🎯') + '</div><div><div class="chatbot-msg-bubble">' + (isError ? '<div class="chatbot-error">' + text + '</div>' : text) + '</div><div class="chatbot-msg-time">' + time + '</div></div>';
   chatbotMessages.appendChild(div);
   chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
 }
@@ -1749,18 +1739,7 @@ function showChatbotTyping() {
   const div = document.createElement('div');
   div.className = 'chatbot-msg ai';
   div.id = 'chatbot-typing';
-  div.innerHTML = `
-    <div class="chatbot-msg-icon">🎯</div>
-    <div>
-      <div class="chatbot-msg-bubble">
-        <div class="chatbot-typing">
-          <div class="chatbot-typing-dot"></div>
-          <div class="chatbot-typing-dot"></div>
-          <div class="chatbot-typing-dot"></div>
-        </div>
-      </div>
-    </div>
-  `;
+  div.innerHTML = '<div class="chatbot-msg-icon">🎯</div><div><div class="chatbot-msg-bubble"><div class="chatbot-typing"><div class="chatbot-typing-dot"></div><div class="chatbot-typing-dot"></div><div class="chatbot-typing-dot"></div></div></div></div>';
   chatbotMessages.appendChild(div);
   chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
 }
@@ -1771,8 +1750,6 @@ function hideChatbotTyping() {
 }
 
 // ══ SMART DATA EXTRACTION ENGINE ══
-// Parses user intent and extracts ONLY relevant fields from passes[]
-
 function extractEventData(query) {
   const q = query.toLowerCase();
   const real = passes.filter(p => p.passID);
@@ -1780,7 +1757,7 @@ function extractEventData(query) {
   const pending = real.filter(p => p.entryStatus !== 'entered' && p.entryStatus !== 'Entered');
 
   const data = {
-    meta: { query, totalRecords: real.length, timestamp: new Date().toISOString() },
+    meta: { query: query, totalRecords: real.length, timestamp: new Date().toISOString() },
     summary: {
       totalPasses: real.length,
       totalEntered: entered.length,
@@ -1793,7 +1770,6 @@ function extractEventData(query) {
     }
   };
 
-  // Department analysis
   const deptMap = {};
   real.forEach(p => {
     const d = p.department || 'Unknown';
@@ -1807,7 +1783,6 @@ function extractEventData(query) {
   });
   data.departments = deptMap;
 
-  // Year analysis
   const yearMap = {};
   real.forEach(p => {
     const y = p.year || 'Unknown';
@@ -1819,13 +1794,11 @@ function extractEventData(query) {
   });
   data.years = yearMap;
 
-  // Payment analysis
   data.payment = {
     upi: { count: real.filter(p => p.paymentMode === 'upi').length, revenue: real.filter(p => p.paymentMode === 'upi').reduce((s, p) => s + (p.amount || 1000), 0) },
     cash: { count: real.filter(p => p.paymentMode === 'cash').length, revenue: real.filter(p => p.paymentMode === 'cash').reduce((s, p) => s + (p.amount || 1000), 0) }
   };
 
-  // Recent passes (last 10)
   data.recent = real.slice(0, 10).map(p => ({
     passID: p.passID, name: p.name, year: p.year, dept: p.department,
     mode: p.paymentMode, amount: p.amount || 1000, status: p.entryStatus,
@@ -1833,23 +1806,18 @@ function extractEventData(query) {
     entryTime: fmtTime(p.entryTime), generatedAt: fmtDateTime(p.generatedAt)
   }));
 
-  // Volunteer stats
   const volStats = {};
   real.forEach(p => { if (p.generatedBy) volStats[p.generatedBy] = (volStats[p.generatedBy] || 0) + 1; });
   data.volunteers = volStats;
 
-  // Security log
   data.security = {
     fakeAttempts: fakeAttempts.length,
     duplicateAttempts: dupAttempts,
     recentFakes: fakeAttempts.slice(-5).map(f => ({ id: f.scannedID, by: f.scannedBy, time: fmtTime(f.timestamp) }))
   };
 
-  // ══ CONTEXTUAL FILTERING (FIXED: word-boundary matching) ══
   const filtered = { meta: data.meta, queryContext: {} };
 
-  // Check for specific department filter using word boundaries
-  // Map: keyword regex -> department name pattern
   const deptPatterns = [
     { regex: /\bcse\b/, names: ['cse', 'cse (ai/ml)'] },
     { regex: /\bit\b/, names: ['it'] },
@@ -1859,13 +1827,11 @@ function extractEventData(query) {
     { regex: /\bee\b/, names: ['ee'] },
     { regex: /\bmi\b/, names: ['mi'] },
     { regex: /\bmba\b/, names: ['mba'] },
-    { regex: /\bai\/\bml\b/, names: ['cse (ai/ml)'] },
   ];
 
   let matchedDeptName = null;
   for (const pat of deptPatterns) {
     if (pat.regex.test(q)) {
-      // Find exact match in deptMap keys
       const match = Object.keys(deptMap).find(d => pat.names.includes(d.toLowerCase()));
       if (match) { matchedDeptName = match; break; }
     }
@@ -1876,7 +1842,6 @@ function extractEventData(query) {
     filtered.queryContext.deptData = deptMap[matchedDeptName] || { total: 0, entered: 0, pending: 0, revenue: 0, upi: 0, cash: 0 };
   }
 
-  // Check for year filter
   const yearPatterns = [
     { regex: /\b1st\b|\bfirst\b/, value: '1st' },
     { regex: /\b2nd\b|\bsecond\b/, value: '2nd' },
@@ -1894,15 +1859,11 @@ function extractEventData(query) {
     filtered.queryContext.yearData = yearMap[matchedYear] || { total: 0, entered: 0, pending: 0, revenue: 0 };
   }
 
-  // Check for payment mode filter
   if (/\bupi\b/.test(q)) filtered.queryContext.paymentMode = 'upi';
   if (/\bcash\b/.test(q)) filtered.queryContext.paymentMode = 'cash';
-
-  // Check for status filter
   if (/\bpending\b|\bnot entered\b/.test(q)) filtered.queryContext.status = 'pending';
   if (/\bentered\b|\bchecked in\b|\barrived\b/.test(q)) filtered.queryContext.status = 'entered';
 
-  // Determine what sections to include
   const askSummary = /\btotal\b|\bsummary\b|\boverview\b|\ball\b|\bhow many\b|\bcount\b/.test(q);
   const askDept = /\bdept\b|\bdepartment\b/.test(q) || matchedDeptName;
   const askYear = /\byear\b/.test(q) || matchedYear;
@@ -1912,8 +1873,9 @@ function extractEventData(query) {
   const askSecurity = /\bfake\b|\binvalid\b|\bsecurity\b|\bforg\b/.test(q);
   const askEntry = /\bentry\b|\bentries\b|\bscan\b|\bgate\b|\bcheck\b/.test(q);
   const askMost = /\bmost\b|\btop\b|\bhighest\b|\bmax\b|\bbest\b|\bleader\b/.test(q);
+  const askStudents = /\bname\b|\bcontact\b|\bphone\b|\bemail\b|\bstudent\b|\blist all\b|\ball names\b|\ball students\b|\bnumber\b|\bmobile\b/.test(q);
 
-  const includeAll = !askDept && !askYear && !askPayment && !askSecurity && !askVolunteer && !askRecent && !askEntry;
+  const includeAll = !askDept && !askYear && !askPayment && !askSecurity && !askVolunteer && !askRecent && !askEntry && !askStudents;
 
   if (includeAll || askSummary) filtered.summary = data.summary;
   if (askDept) filtered.departments = matchedDeptName ? { [matchedDeptName]: deptMap[matchedDeptName] } : deptMap;
@@ -1924,14 +1886,19 @@ function extractEventData(query) {
   if (askSecurity) filtered.security = data.security;
   if (askEntry) filtered.entries = { entered: entered.length, pending: pending.length, percentage: real.length ? ((entered.length / real.length) * 100).toFixed(1) : 0 };
   if (askMost) {
-    // For "most" queries, include everything so the answer generator can compute rankings
     filtered.departments = deptMap;
     filtered.years = yearMap;
     filtered.payment = data.payment;
     filtered.summary = data.summary;
   }
+  if (askStudents) {
+    filtered.allStudents = real.map(p => ({
+      passID: p.passID, name: p.name, phone: p.phone || '-', email: p.email || '-',
+      department: p.department || '-', year: p.year || '-', paymentMode: p.paymentMode || '-',
+      amount: p.amount || 1000, entryStatus: p.entryStatus, generatedBy: p.generatedBy
+    }));
+  }
 
-  // If nothing specific matched, return summary
   if (Object.keys(filtered).length <= 2) {
     filtered.summary = data.summary;
     filtered.departments = deptMap;
@@ -1941,31 +1908,20 @@ function extractEventData(query) {
   return filtered;
 }
 
-// ══ AI PROMPT BUILDER ══
+// ══ AI PROMPT BUILDER — NO MULTI-LINE STRINGS ══
 function buildAIPrompt(query, data) {
-  // If user asks for all students/contacts, include the full list in the prompt
   let extraContext = '';
   if (data.allStudents && data.allStudents.length > 0) {
-    extraContext = `\n\nFULL STUDENT RECORDS (${data.allStudents.length} total):\n` + 
+    extraContext = '\n\nFULL STUDENT RECORDS (' + data.allStudents.length + ' total):\n' + 
       data.allStudents.map((s, i) => 
-        `${i+1}. ${s.name} | ${s.passID} | Phone: ${s.phone} | Email: ${s.email} | ${s.department} | ${s.year} Year | ${s.entryStatus}`
+        (i+1) + '. ' + s.name + ' | ' + s.passID + ' | Phone: ' + s.phone + ' | Email: ' + s.email + ' | ' + s.department + ' | ' + s.year + ' Year | ' + s.entryStatus
       ).join('\n');
   }
 
-  return `You are the analytics assistant for "Freshers Party 2026" event management system.
-You answer queries using ONLY the provided Firebase data. Be concise, accurate, and use bold for key numbers.
-Format with bullet points or short paragraphs. Keep under 150 words unless detail requested.
-Never make up data not present in the JSON.
-
-USER QUERY: "${query}"
-
-EXTRACTED FIREBASE DATA:
-${JSON.stringify(data, null, 2)}${extraContext}
-
-Provide a clear, helpful summary answering the user's specific question:`;
+  return 'You are the analytics assistant for "Freshers Party 2026" event management system.\nYou answer queries using ONLY the provided Firebase data. Be concise, accurate, and use bold for key numbers.\nFormat with bullet points or short paragraphs. Keep under 150 words unless detail requested.\nNever make up data not present in the JSON.\n\nUSER QUERY: "' + query + '"\n\nEXTRACTED FIREBASE DATA:\n' + JSON.stringify(data, null, 2) + extraContext + '\n\nProvide a clear, helpful summary answering the user\'s specific question:';
 }
 
-// ══ FREE AI API CALL (OVHcloud - no signup, no key) ══
+// ══ FREE AI API CALL (OVHcloud) ══
 async function callFreeAI(prompt) {
   try {
     const response = await fetch('https://llama-3-1-8b-instruct.endpoints.kepler.ai.cloud.ovh.net/api/openai_compat/v1/chat/completions', {
@@ -1981,9 +1937,9 @@ async function callFreeAI(prompt) {
         temperature: 0.3
       })
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
     const result = await response.json();
-    return result.choices?.[0]?.message?.content || result.choices?.[0]?.text || null;
+    return result.choices && result.choices[0] && result.choices[0].message ? result.choices[0].message.content : null;
   } catch (e) {
     try {
       const response2 = await fetch('https://mistral-7b-instruct.endpoints.kepler.ai.cloud.ovh.net/api/openai_compat/v1/chat/completions', {
@@ -1999,16 +1955,16 @@ async function callFreeAI(prompt) {
           temperature: 0.3
         })
       });
-      if (!response2.ok) throw new Error(`HTTP ${response2.status}`);
+      if (!response2.ok) throw new Error('HTTP ' + response2.status);
       const result2 = await response2.json();
-      return result2.choices?.[0]?.message?.content || null;
+      return result2.choices && result2.choices[0] && result2.choices[0].message ? result2.choices[0].message.content : null;
     } catch (e2) {
       return null;
     }
   }
 }
 
-// ══ LOCAL INTELLIGENT ANSWER GENERATOR (no AI needed) ══
+// ══ LOCAL INTELLIGENT ANSWER GENERATOR ══
 function generateLocalAnswer(query, data) {
   const q = query.toLowerCase();
   const real = passes.filter(p => p.passID);
@@ -2016,207 +1972,123 @@ function generateLocalAnswer(query, data) {
 
   const makeTable = (headers, rows) => {
     if (!rows || rows.length === 0) return '<div style="color:var(--muted);font-size:12px;margin-top:6px">No data available.</div>';
-    let t = '<table class="chatbot-table"><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
-    rows.forEach(row => {
-      t += '<tr>' + row.map(c => `<td>${c}</td>`).join('') + '</tr>';
-    });
+    let t = '<table class="chatbot-table"><tr>' + headers.map(h => '<th>' + h + '</th>').join('') + '</tr>';
+    rows.forEach(row => { t += '<tr>' + row.map(c => '<td>' + c + '</td>').join('') + '</tr>'; });
     return t + '</table>';
   };
 
-  // Helper: get all departments sorted
-  const getSortedDepts = () => {
-    const depts = data.departments || {};
-    return Object.entries(depts).sort((a, b) => b[1].total - a[1].total);
-  };
+  const getSortedDepts = () => { const depts = data.departments || {}; return Object.entries(depts).sort((a, b) => b[1].total - a[1].total); };
+  const getSortedYears = () => { const yrs = data.years || {}; return Object.entries(yrs).sort((a, b) => b[1].total - a[1].total); };
 
-  // Helper: get all years sorted
-  const getSortedYears = () => {
-    const yrs = data.years || {};
-    return Object.entries(yrs).sort((a, b) => b[1].total - a[1].total);
-  };
-
-  // ══ "MOST" QUERIES (most entries, most revenue, top department, etc.) ══
   if (/\bmost\b|\btop\b|\bhighest\b|\bmax\b|\bbest\b/.test(q)) {
     if (/\bentry\b|\bentries\b|\bentered\b|\barrived\b/.test(q)) {
       const sorted = getSortedDepts().filter(([_, s]) => s.entered > 0);
-      if (sorted.length === 0) {
-        html += `<div class="chatbot-section-title">🏛️ Department Entry Leaderboard</div>`;
-        html += `<div style="color:var(--muted);font-size:13px">No entries recorded yet. All ${real.length} passes are pending.</div>`;
-        return html;
-      }
+      if (sorted.length === 0) { html += '<div class="chatbot-section-title">🏛️ Department Entry Leaderboard</div><div style="color:var(--muted);font-size:13px">No entries recorded yet. All ' + real.length + ' passes are pending.</div>'; return html; }
       const top = sorted[0];
-      html += `<div class="chatbot-section-title">🏛️ Most Entries: ${top[0]}</div>`;
-      html += `<strong>${top[1].entered} students entered</strong> out of ${top[1].total} total ${top[0]} passes<br>`;
-      html += `• Entry rate: ${top[1].total ? ((top[1].entered/top[1].total)*100).toFixed(1) : 0}%<br>`;
-      html += makeTable(['Dept', 'Entered', 'Total', 'Rate'], sorted.slice(0, 5).map(([d, s]) => [d, s.entered, s.total, `${s.total?((s.entered/s.total)*100).toFixed(1):0}%`]));
+      html += '<div class="chatbot-section-title">🏛️ Most Entries: ' + top[0] + '</div><strong>' + top[1].entered + ' students entered</strong> out of ' + top[1].total + ' total ' + top[0] + ' passes<br>• Entry rate: ' + (top[1].total ? ((top[1].entered/top[1].total)*100).toFixed(1) : 0) + '%<br>';
+      html += makeTable(['Dept', 'Entered', 'Total', 'Rate'], sorted.slice(0, 5).map(([d, s]) => [d, s.entered, s.total, (s.total?((s.entered/s.total)*100).toFixed(1):0)+'%']));
       return html;
     }
-
     if (/\brevenue\b|\bmoney\b|\bamount\b/.test(q)) {
       const sorted = getSortedDepts().filter(([_, s]) => s.revenue > 0);
       if (sorted.length === 0) return '<div style="color:var(--muted)">No revenue data yet.</div>';
       const top = sorted[0];
-      html += `<div class="chatbot-section-title">💰 Top Revenue: ${top[0]}</div>`;
-      html += `<strong>₹${top[1].revenue.toLocaleString()}</strong> from ${top[1].total} passes<br>`;
-      html += makeTable(['Dept', 'Revenue', 'Passes'], sorted.slice(0, 5).map(([d, s]) => [d, `₹${s.revenue.toLocaleString()}`, s.total]));
+      html += '<div class="chatbot-section-title">💰 Top Revenue: ' + top[0] + '</div><strong>₹' + top[1].revenue.toLocaleString() + '</strong> from ' + top[1].total + ' passes<br>';
+      html += makeTable(['Dept', 'Revenue', 'Passes'], sorted.slice(0, 5).map(([d, s]) => [d, '₹' + s.revenue.toLocaleString(), s.total]));
       return html;
     }
-
-    if (/\bpass\b|\bstudent\b|\btotal\b/.test(q)) {
-      const sorted = getSortedDepts();
-      if (sorted.length === 0) return '<div style="color:var(--muted)">No pass data yet.</div>';
-      const top = sorted[0];
-      html += `<div class="chatbot-section-title">🎟️ Most Passes: ${top[0]}</div>`;
-      html += `<strong>${top[1].total} passes</strong> generated<br>`;
-      html += makeTable(['Dept', 'Passes', 'Entered', 'Pending'], sorted.slice(0, 5).map(([d, s]) => [d, s.total, s.entered, s.pending]));
-      return html;
-    }
-
-    // Default "most" → show top department by passes
     const sorted = getSortedDepts();
     if (sorted.length > 0) {
       const top = sorted[0];
-      html += `<div class="chatbot-section-title">🎟️ Top Department: ${top[0]}</div>`;
-      html += `<strong>${top[1].total} passes</strong> · ₹${top[1].revenue.toLocaleString()} revenue · ${top[1].entered} entered<br>`;
-      html += makeTable(['Rank', 'Dept', 'Passes', 'Revenue'], sorted.slice(0, 5).map(([d, s], i) => [`#${i+1}`, d, s.total, `₹${s.revenue.toLocaleString()}`]));
+      html += '<div class="chatbot-section-title">🎟️ Top Department: ' + top[0] + '</div><strong>' + top[1].total + ' passes</strong> · ₹' + top[1].revenue.toLocaleString() + ' revenue · ' + top[1].entered + ' entered<br>';
+      html += makeTable(['Rank', 'Dept', 'Passes', 'Revenue'], sorted.slice(0, 5).map(([d, s], i) => ['#' + (i+1), d, s.total, '₹' + s.revenue.toLocaleString()]));
       return html;
     }
   }
 
-  // ══ REVENUE / MONEY QUERIES ══
   if (/\brevenue\b|\bmoney\b|\bcollection\b|\bamount\b|\b₹\b|\brs\b/.test(q)) {
-    const upiRev = data.payment?.upi?.revenue || 0;
-    const cashRev = data.payment?.cash?.revenue || 0;
+    const upiRev = data.payment && data.payment.upi ? data.payment.upi.revenue : 0;
+    const cashRev = data.payment && data.payment.cash ? data.payment.cash.revenue : 0;
     const total = upiRev + cashRev;
-    html += `<div class="chatbot-section-title">💰 Revenue Summary</div>`;
-    html += `<strong style="font-size:16px;color:var(--gold)">Total: ₹${total.toLocaleString()}</strong><br>`;
-    html += `• UPI: ₹${upiRev.toLocaleString()} (${data.payment?.upi?.count || 0} passes)<br>`;
-    html += `• Cash: ₹${cashRev.toLocaleString()} (${data.payment?.cash?.count || 0} passes)<br>`;
-    html += `• Average per pass: ₹${real.length ? Math.round(total/real.length) : 0}`;
+    html += '<div class="chatbot-section-title">💰 Revenue Summary</div><strong style="font-size:16px;color:var(--gold)">Total: ₹' + total.toLocaleString() + '</strong><br>• UPI: ₹' + upiRev.toLocaleString() + ' (' + (data.payment && data.payment.upi ? data.payment.upi.count : 0) + ' passes)<br>• Cash: ₹' + cashRev.toLocaleString() + ' (' + (data.payment && data.payment.cash ? data.payment.cash.count : 0) + ' passes)<br>• Average per pass: ₹' + (real.length ? Math.round(total/real.length) : 0);
     return html;
   }
 
-  // ══ DEPARTMENT QUERIES ══
   if (/\bdept\b|\bdepartment\b/.test(q)) {
     const depts = data.departments || {};
     const sorted = getSortedDepts();
     if (sorted.length === 0) return 'No department data available yet.';
-
-    const specificDept = data.queryContext?.department;
+    const specificDept = data.queryContext && data.queryContext.department;
     if (specificDept && depts[specificDept]) {
       const d = depts[specificDept];
-      html += `<div class="chatbot-section-title">🏛️ ${specificDept} Department</div>`;
-      html += `<strong style="font-size:15px">${d.total} passes</strong> · ₹${d.revenue.toLocaleString()} revenue<br>`;
-      html += `• Entered: <span class="chatbot-highlight">${d.entered}</span> | Pending: ${d.pending}<br>`;
-      html += `• UPI: ${d.upi} passes | Cash: ${d.cash} passes`;
+      html += '<div class="chatbot-section-title">🏛️ ' + specificDept + ' Department</div><strong style="font-size:15px">' + d.total + ' passes</strong> · ₹' + d.revenue.toLocaleString() + ' revenue<br>• Entered: <span class="chatbot-highlight">' + d.entered + '</span> | Pending: ' + d.pending + '<br>• UPI: ' + d.upi + ' passes | Cash: ' + d.cash + ' passes';
       return html;
     }
-
-    html += `<div class="chatbot-section-title">🏛️ Department Breakdown</div>`;
-    html += makeTable(['Dept', 'Passes', 'Revenue', 'Entered', 'Pending'], 
-      sorted.map(([dept, s]) => [dept, s.total, `₹${s.revenue.toLocaleString()}`, s.entered, s.pending])
-    );
+    html += '<div class="chatbot-section-title">🏛️ Department Breakdown</div>';
+    html += makeTable(['Dept', 'Passes', 'Revenue', 'Entered', 'Pending'], sorted.map(([dept, s]) => [dept, s.total, '₹' + s.revenue.toLocaleString(), s.entered, s.pending]));
     return html;
   }
 
-  // ══ YEAR QUERIES ══
   if (/\byear\b|\b1st\b|\b2nd\b|\b3rd\b|\b4th\b|\bfirst\b|\bsecond\b|\bthird\b|\bfourth\b/.test(q)) {
     const years = data.years || {};
     const sorted = getSortedYears();
     if (sorted.length === 0) return 'No year data available yet.';
-
-    const specificYear = data.queryContext?.year;
+    const specificYear = data.queryContext && data.queryContext.year;
     if (specificYear && years[specificYear]) {
       const y = years[specificYear];
-      html += `<div class="chatbot-section-title">📅 ${specificYear} Year Students</div>`;
-      html += `<strong style="font-size:15px">${y.total} passes</strong><br>`;
-      html += `• Entered: <span class="chatbot-highlight">${y.entered}</span> | Pending: ${y.pending}<br>`;
-      html += `• Revenue: ₹${y.revenue.toLocaleString()}<br>`;
-      html += `• Entry rate: ${y.total ? ((y.entered/y.total)*100).toFixed(1) : 0}%`;
+      html += '<div class="chatbot-section-title">📅 ' + specificYear + ' Year Students</div><strong style="font-size:15px">' + y.total + ' passes</strong><br>• Entered: <span class="chatbot-highlight">' + y.entered + '</span> | Pending: ' + y.pending + '<br>• Revenue: ₹' + y.revenue.toLocaleString() + '<br>• Entry rate: ' + (y.total ? ((y.entered/y.total)*100).toFixed(1) : 0) + '%';
       return html;
     }
-
-    html += `<div class="chatbot-section-title">📅 Year-wise Breakdown</div>`;
-    html += makeTable(['Year', 'Total', 'Entered', 'Pending', 'Revenue'],
-      sorted.map(([yr, s]) => [yr, s.total, s.entered, s.pending, `₹${s.revenue.toLocaleString()}`])
-    );
+    html += '<div class="chatbot-section-title">📅 Year-wise Breakdown</div>';
+    html += makeTable(['Year', 'Total', 'Entered', 'Pending', 'Revenue'], sorted.map(([yr, s]) => [yr, s.total, s.entered, s.pending, '₹' + s.revenue.toLocaleString()]));
     return html;
   }
 
-  // ══ PAYMENT MODE QUERIES ══
   if (/\bupi\b|\bcash\b|\bpayment\b/.test(q)) {
-    const upi = data.payment?.upi?.count || 0;
-    const cash = data.payment?.cash?.count || 0;
+    const upi = data.payment && data.payment.upi ? data.payment.upi.count : 0;
+    const cash = data.payment && data.payment.cash ? data.payment.cash.count : 0;
     const total = real.length;
-    html += `<div class="chatbot-section-title">💳 Payment Breakdown</div>`;
-    html += `<strong>${total} total passes</strong><br>`;
-    html += `• UPI: <span class="chatbot-highlight">${upi}</span> passes (${total ? ((upi/total)*100).toFixed(1) : 0}%)<br>`;
-    html += `• Cash: <span class="chatbot-highlight">${cash}</span> passes (${total ? ((cash/total)*100).toFixed(1) : 0}%)`;
+    html += '<div class="chatbot-section-title">💳 Payment Breakdown</div><strong>' + total + ' total passes</strong><br>• UPI: <span class="chatbot-highlight">' + upi + '</span> passes (' + (total ? ((upi/total)*100).toFixed(1) : 0) + '%)<br>• Cash: <span class="chatbot-highlight">' + cash + '</span> passes (' + (total ? ((cash/total)*100).toFixed(1) : 0) + '%)';
     return html;
   }
 
-  // ══ PENDING QUERIES ══
   if (/\bpending\b|\bnot entered\b/.test(q)) {
     const pending = real.filter(p => p.entryStatus !== 'entered' && p.entryStatus !== 'Entered');
-    html += `<div class="chatbot-section-title">⏳ Pending Entries</div>`;
-    html += `<strong style="font-size:15px">${pending.length} passes pending</strong> out of ${real.length} total<br>`;
-    html += `• Already entered: ${real.length - pending.length}<br>`;
-    html += `• Completion rate: ${real.length ? (((real.length-pending.length)/real.length)*100).toFixed(1) : 0}%`;
+    html += '<div class="chatbot-section-title">⏳ Pending Entries</div><strong style="font-size:15px">' + pending.length + ' passes pending</strong> out of ' + real.length + ' total<br>• Already entered: ' + (real.length - pending.length) + '<br>• Completion rate: ' + (real.length ? (((real.length-pending.length)/real.length)*100).toFixed(1) : 0) + '%';
     return html;
   }
 
-  // ══ ENTERED QUERIES ══
-  if (/\bentered\b|\bentries\b|\bcheck\b|\bgate\b|\bscan\b|\barrived\b/.test(q)) {
+  if (/\bentered\b|\bcheck\b|\bgate\b|\bscan\b|\barrived\b/.test(q)) {
     const entered = real.filter(p => p.entryStatus === 'entered' || p.entryStatus === 'Entered');
-    html += `<div class="chatbot-section-title">✅ Entry Status</div>`;
-    html += `<strong style="font-size:15px">${entered.length} students entered</strong> out of ${real.length}<br>`;
-    html += `• Completion: ${real.length ? ((entered.length/real.length)*100).toFixed(1) : 0}%<br>`;
-    html += `• Remaining: ${real.length - entered.length} students`;
+    html += '<div class="chatbot-section-title">✅ Entry Status</div><strong style="font-size:15px">' + entered.length + ' students entered</strong> out of ' + real.length + '<br>• Completion: ' + (real.length ? ((entered.length/real.length)*100).toFixed(1) : 0) + '%<br>• Remaining: ' + (real.length - entered.length) + ' students';
     return html;
   }
 
-  // ══ SECURITY QUERIES ══
   if (/\bfake\b|\binvalid\b|\bsecurity\b|\bforg\b/.test(q)) {
-    html += `<div class="chatbot-section-title">🚨 Security Log</div>`;
-    html += `• Fake attempts: <span class="chatbot-highlight">${fakeAttempts.length}</span><br>`;
-    html += `• Duplicate scans: <span class="chatbot-highlight">${dupAttempts}</span><br>`;
-    if (fakeAttempts.length > 0) {
-      const last = fakeAttempts[fakeAttempts.length-1];
-      html += `• Last attempt: <span style="font-family:DM Mono;font-size:11px">${last?.scannedID || 'N/A'}</span> by ${last?.scannedBy || 'unknown'}`;
-    }
+    html += '<div class="chatbot-section-title">🚨 Security Log</div>• Fake attempts: <span class="chatbot-highlight">' + fakeAttempts.length + '</span><br>• Duplicate scans: <span class="chatbot-highlight">' + dupAttempts + '</span>';
+    if (fakeAttempts.length > 0) { const last = fakeAttempts[fakeAttempts.length-1]; html += '<br>• Last attempt: <span style="font-family:DM Mono;font-size:11px">' + (last && last.scannedID ? last.scannedID : 'N/A') + '</span>'; }
     return html;
   }
 
-  // ══ VOLUNTEER QUERIES ══
   if (/\bvolunteer\b|\badmin\b|\bwho generated\b|\bgenerated by\b/.test(q)) {
     const vols = data.volunteers || {};
     const sorted = Object.entries(vols).sort((a,b) => b[1] - a[1]);
     if (sorted.length === 0) return 'No volunteer generation data yet.';
-    html += `<div class="chatbot-section-title">👥 Pass Generation by Admin</div>`;
-    html += makeTable(['Admin', 'Passes Generated'],
-      sorted.map(([email, count]) => [email.split('@')[0] || email, `<span class="chatbot-highlight">${count}</span>`])
-    );
+    html += '<div class="chatbot-section-title">👥 Pass Generation by Admin</div>';
+    html += makeTable(['Admin', 'Passes Generated'], sorted.map(([email, count]) => [email.split('@')[0] || email, '<span class="chatbot-highlight">' + count + '</span>']));
     return html;
   }
 
-  // ══ RECENT / TODAY QUERIES ══
   if (/\brecent\b|\blatest\b|\btoday\b|\bnew\b/.test(q)) {
     const recent = data.recent || [];
     if (recent.length === 0) return 'No recent passes to show.';
-    html += `<div class="chatbot-section-title">🕐 Recent Passes (Last ${recent.length})</div>`;
-    html += makeTable(['Pass ID', 'Name', 'Dept', 'Year', 'Mode'],
-      recent.map(r => [r.passID, r.name, r.dept || '-', r.year || '-', (r.mode || '-').toUpperCase()])
-    );
+    html += '<div class="chatbot-section-title">🕐 Recent Passes (Last ' + recent.length + ')</div>';
+    html += makeTable(['Pass ID', 'Name', 'Dept', 'Year', 'Mode'], recent.map(r => [r.passID, r.name, r.dept || '-', r.year || '-', (r.mode || '-').toUpperCase()]));
     return html;
   }
 
-  // ══ CONTACT / NAME SEARCH QUERIES — SMART STUDENT DIRECTORY ══
   if (/\bname\b|\bcontact\b|\bphone\b|\bemail\b|\bstudent\b|\blist all\b|\ball names\b|\ball students\b|\bnumber\b|\bmobile\b/.test(q)) {
-
-    // Extract search term if any specific name mentioned
-    const searchTerm = query.replace(/how many|total|show|list|find|get|student|pass|all|names|contact|number|phone|email|mobile|tell|me|the|and|of/i, '').trim().toLowerCase();
-
-    // If searching for a specific name
+    const searchTerm = query.replace(/how many|total|show|list|find|get|student|pass|all|names|contact|number|phone|email|mobile|tell|me|the|and|of|with|their/i, '').trim().toLowerCase();
     if (searchTerm.length > 2) {
       const matches = real.filter(p => 
         (p.name && p.name.toLowerCase().includes(searchTerm)) ||
@@ -2225,135 +2097,82 @@ function generateLocalAnswer(query, data) {
         (p.passID && p.passID.toLowerCase().includes(searchTerm))
       );
       if (matches.length > 0) {
-        html += `<div class="chatbot-section-title">🔍 Search: "${searchTerm}" — ${matches.length} result(s)</div>`;
-        html += makeTable(['Name', 'Pass ID', 'Phone', 'Email', 'Dept', 'Year'],
-          matches.map(m => [m.name, m.passID, m.phone || '-', m.email || '-', m.department || '-', m.year || '-'])
-        );
+        html += '<div class="chatbot-section-title">🔍 Search: "' + searchTerm + '" — ' + matches.length + ' result(s)</div>';
+        html += makeTable(['Name', 'Pass ID', 'Phone', 'Email', 'Dept', 'Year'], matches.map(m => [m.name, m.passID, m.phone || '-', m.email || '-', m.department || '-', m.year || '-']));
         return html;
       }
-      html += `<div class="chatbot-section-title">🔍 No results for "${searchTerm}"</div>`;
-      html += `<div style="color:var(--muted);font-size:12px">Try searching by name, phone, email, or pass ID.</div>`;
+      html += '<div class="chatbot-section-title">🔍 No results for "' + searchTerm + '"</div><div style="color:var(--muted);font-size:12px">Try searching by name, phone, email, or pass ID.</div>';
       return html;
     }
 
-    // ══ LIST ALL STUDENTS WITH FULL CONTACTS ══
-    // Build comprehensive student directory with ALL fields
     const allStudents = real.map(m => ({
-      name: m.name,
-      passID: m.passID,
-      phone: m.phone || '-',
-      email: m.email || '-',
-      dept: m.department || '-',
-      year: m.year || '-',
-      mode: (m.paymentMode || '-').toUpperCase(),
-      amount: `₹${m.amount || 1000}`,
-      status: m.entryStatus === 'entered' || m.entryStatus === 'Entered' ? '✅ Entered' : '⏳ Pending'
+      name: m.name, passID: m.passID, phone: m.phone || '-', email: m.email || '-',
+      dept: m.department || '-', year: m.year || '-', mode: (m.paymentMode || '-').toUpperCase(),
+      amount: '₹' + (m.amount || 1000), status: m.entryStatus === 'entered' || m.entryStatus === 'Entered' ? '✅ Entered' : '⏳ Pending'
     }));
 
-    html += `<div class="chatbot-section-title">📋 Student Directory — ${allStudents.length} Records</div>`;
-
-    // Show all students in a scrollable table (no 20-limit)
+    html += '<div class="chatbot-section-title">📋 Student Directory — ' + allStudents.length + ' Records</div>';
     html += makeTable(['#', 'Name', 'Pass ID', 'Phone', 'Email', 'Dept', 'Year', 'Status'],
       allStudents.map((s, i) => [
-        `<span style="color:var(--muted);font-size:10px">${i+1}</span>`,
-        `<strong>${s.name}</strong>`,
-        `<span style="color:var(--gold);font-family:DM Mono">${s.passID}</span>`,
+        '<span style="color:var(--muted);font-size:10px">' + (i+1) + '</span>',
+        '<strong>' + s.name + '</strong>',
+        '<span style="color:var(--gold);font-family:DM Mono">' + s.passID + '</span>',
         s.phone,
-        `<span style="font-size:10px;color:var(--muted)">${s.email}</span>`,
-        s.dept,
-        s.year,
-        s.status
+        '<span style="font-size:10px;color:var(--muted)">' + s.email + '</span>',
+        s.dept, s.year, s.status
       ])
     );
-
-    // Summary footer
-    html += `<div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">`;
-    html += `<div style="font-size:11px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap">`;
-    html += `<span>Total: <strong style="color:var(--gold)">${allStudents.length}</strong></span>`;
-    html += `<span>Entered: <strong style="color:var(--green)">${allStudents.filter(s => s.status.includes('Entered')).length}</strong></span>`;
-    html += `<span>Pending: <strong style="color:var(--orange)">${allStudents.filter(s => s.status.includes('Pending')).length}</strong></span>`;
-    html += `</div></div>`;
-
+    html += '<div style="margin-top:10px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)"><div style="font-size:11px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap"><span>Total: <strong style="color:var(--gold)">' + allStudents.length + '</strong></span><span>Entered: <strong style="color:var(--green)">' + allStudents.filter(s => s.status.includes('Entered')).length + '</strong></span><span>Pending: <strong style="color:var(--orange)">' + allStudents.filter(s => s.status.includes('Pending')).length + '</strong></span></div></div>';
     return html;
   }
 
-  // ══ DEFAULT COMPREHENSIVE SUMMARY ══
   const entered = real.filter(p => p.entryStatus === 'entered' || p.entryStatus === 'Entered');
   const upi = real.filter(p => p.paymentMode === 'upi');
   const cash = real.filter(p => p.paymentMode === 'cash');
   const totalRev = real.reduce((s,p) => s + (p.amount || 1000), 0);
 
-  html += `<div class="chatbot-section-title">📊 FP2026 Event Summary</div>`;
-  html += `<strong style="font-size:16px;color:var(--gold)">${real.length}</strong> total passes generated<br>`;
-  html += `• Entered: <span class="chatbot-highlight">${entered.length}</span> | Pending: ${real.length - entered.length}<br>`;
-  html += `• Revenue: <span class="chatbot-highlight">₹${totalRev.toLocaleString()}</span><br>`;
-  html += `• UPI: ${upi.length} | Cash: ${cash.length}<br>`;
-  html += `• Fake attempts: ${fakeAttempts.length} | Duplicates: ${dupAttempts}<br><br>`;
-  html += `<em style="color:var(--muted)">Try: "Show all students with contacts" · "CSE 1st year" · "UPI payments" · "Most entries"</em>`;
+  html += '<div class="chatbot-section-title">📊 FP2026 Event Summary</div><strong style="font-size:16px;color:var(--gold)">' + real.length + '</strong> total passes generated<br>• Entered: <span class="chatbot-highlight">' + entered.length + '</span> | Pending: ' + (real.length - entered.length) + '<br>• Revenue: <span class="chatbot-highlight">₹' + totalRev.toLocaleString() + '</span><br>• UPI: ' + upi.length + ' | Cash: ' + cash.length + '<br>• Fake attempts: ' + fakeAttempts.length + ' | Duplicates: ' + dupAttempts + '<br><br><em style="color:var(--muted)">Try: "Show all students with contacts" · "CSE 1st year" · "UPI payments" · "Most entries"</em>';
   return html;
 }
 
-// ══ MAIN CHATBOT HANDLER ══
+// ══ MAIN HANDLER ══
 window.sendChatbot = async () => {
   const query = chatbotInput.value.trim();
   if (!query) return;
-
   chatbotInput.value = '';
   addChatbotMsg(query, true);
   showChatbotTyping();
   chatbotSend.disabled = true;
-
   try {
     const eventData = extractEventData(query);
     const prompt = buildAIPrompt(query, eventData);
     let aiResponse = null;
-
-    if (passes.length > 0) {
-      aiResponse = await callFreeAI(prompt);
-    }
-
+    if (passes.length > 0) aiResponse = await callFreeAI(prompt);
     hideChatbotTyping();
-
     if (aiResponse) {
-      addChatbotMsg(aiResponse + `<div class="chatbot-data-badge">🤖 AI Summarized · 📡 Firebase Live</div>`);
+      addChatbotMsg(aiResponse + '<div class="chatbot-data-badge">🤖 AI Summarized · 📡 Firebase Live</div>');
     } else {
       const localAnswer = generateLocalAnswer(query, eventData);
-      addChatbotMsg(localAnswer + `<div class="chatbot-data-badge">📡 Firebase Live · Local Analytics</div>`);
+      addChatbotMsg(localAnswer + '<div class="chatbot-data-badge">📡 Firebase Live · Local Analytics</div>');
     }
   } catch (e) {
     hideChatbotTyping();
     console.error('Chatbot error:', e);
     const eventData = extractEventData(query);
     const localAnswer = generateLocalAnswer(query, eventData);
-    addChatbotMsg(localAnswer + `<div class="chatbot-data-badge">📡 Firebase Live · Local Mode</div>`);
+    addChatbotMsg(localAnswer + '<div class="chatbot-data-badge">📡 Firebase Live · Local Mode</div>');
   }
-
   chatbotSend.disabled = false;
 };
 
-window.sendChatbotQuick = (text) => {
-  chatbotInput.value = text;
-  sendChatbot();
-};
+window.sendChatbotQuick = (text) => { chatbotInput.value = text; sendChatbot(); };
 
-// Auto-open chatbot when navigating to Analytics
 const _originalShowPage = window.showPage;
 window.showPage = function(name) {
   _originalShowPage(name);
-  if (name === 'analytics') {
-    setTimeout(() => { if (!chatbotOpen) toggleChatbot(); }, 600);
-  }
+  if (name === 'analytics') { setTimeout(() => { if (!chatbotOpen) toggleChatbot(); }, 600); }
 };
-const _originalShowPage = window.showPage;
-window.showPage = function(name) {
-  _originalShowPage(name);
-  if (name === 'analytics') {
-    setTimeout(() => { if (!chatbotOpen) toggleChatbot(); }, 600);
-  }
-};
-
 </script>
-
 <!-- ═══════════════════ AI ANALYTICS CHATBOT ═══════════════════ -->
 <div class="chatbot-wrap collapsed" id="chatbot-wrap">
   <div class="chatbot-header" onclick="toggleChatbot()">
@@ -2375,12 +2194,12 @@ window.showPage = function(name) {
             <div class="chatbot-welcome">
               <strong style="color:var(--gold)">👋 Hello! I'm your FP2026 Analytics Assistant.</strong><br><br>
               Ask me anything about your event data — I query Firebase live and summarize answers:<br><br>
+              <span style="color:var(--gold)">•</span> <em>"Show all students with contacts"</em><br>
               <span style="color:var(--gold)">•</span> <em>"How many 1st year CSE students paid via UPI?"</em><br>
               <span style="color:var(--gold)">•</span> <em>"Show total revenue and payment split"</em><br>
               <span style="color:var(--gold)">•</span> <em>"Which department has most entries?"</em><br>
               <span style="color:var(--gold)">•</span> <em>"List pending entries from 2nd year"</em><br>
-              <span style="color:var(--gold)">•</span> <em>"Summarize today's registrations"</em><br>
-              <span style="color:var(--gold)">•</span> <em>"Who generated the most passes?"</em><br><br>
+              <span style="color:var(--gold)">•</span> <em>"Summarize today's registrations"</em><br><br>
               <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
                 <span style="width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);display:inline-block"></span>
                 <span style="color:var(--green);font-size:11px">Powered by live Firebase data extraction + AI summarization</span>
@@ -2392,6 +2211,7 @@ window.showPage = function(name) {
       </div>
     </div>
     <div class="chatbot-suggestions" id="chatbot-suggestions">
+      <button class="chatbot-chip" onclick="sendChatbotQuick('Show all students with contacts')">📋 All Students</button>
       <button class="chatbot-chip" onclick="sendChatbotQuick('Total passes and revenue summary')">📊 Overview</button>
       <button class="chatbot-chip" onclick="sendChatbotQuick('UPI vs Cash payment breakdown')">💳 Payments</button>
       <button class="chatbot-chip" onclick="sendChatbotQuick('Department with most entries')">🏛️ Top Dept</button>
