@@ -315,6 +315,56 @@ tbody td{padding:10px 12px;color:var(--text);vertical-align:middle;}
   #printable-pass,#printable-pass *{visibility:visible;}
   #printable-pass{position:fixed;top:0;left:0;}
 }
+
+/* ══ AI ANALYTICS CHATBOT ══ */
+.chatbot-wrap{position:fixed;bottom:22px;right:22px;z-index:9998;width:400px;max-width:calc(100vw - 44px);display:flex;flex-direction:column;gap:0;transition:all .3s ease;}
+.chatbot-wrap.collapsed{width:auto;}
+.chatbot-wrap.collapsed .chatbot-body{display:none;}
+.chatbot-wrap.collapsed .chatbot-header{border-radius:14px;}
+.chatbot-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(135deg,var(--purple),#7C3AED);border-radius:14px 14px 0 0;cursor:pointer;box-shadow:0 4px 20px rgba(168,85,247,.3);border:1px solid rgba(168,85,247,.4);}
+.chatbot-header-left{display:flex;align-items:center;gap:10px;}
+.chatbot-avatar{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:14px;}
+.chatbot-title{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:#fff;}
+.chatbot-status{font-family:'DM Mono',monospace;font-size:9px;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:4px;}
+.chatbot-status-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;animation:fbp 2s infinite;}
+.chatbot-toggle{background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:16px;padding:2px 4px;transition:color .2s;}
+.chatbot-toggle:hover{color:#fff;}
+.chatbot-body{background:var(--surface);border:1px solid rgba(168,85,247,.25);border-top:none;border-radius:0 0 14px 14px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.5);display:flex;flex-direction:column;height:500px;max-height:65vh;}
+.chatbot-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.chatbot-msg{display:flex;gap:8px;max-width:95%;animation:slideUp .25s ease;}
+.chatbot-msg.user{align-self:flex-end;flex-direction:row-reverse;}
+.chatbot-msg-bubble{padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.6;word-wrap:break-word;}
+.chatbot-msg.ai .chatbot-msg-bubble{background:var(--surface2);border:1px solid rgba(168,85,247,.15);color:var(--text);border-top-left-radius:4px;}
+.chatbot-msg.user .chatbot-msg-bubble{background:var(--purple);color:#fff;border-top-right-radius:4px;}
+.chatbot-msg-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:2px;}
+.chatbot-msg.ai .chatbot-msg-icon{background:rgba(168,85,247,.15);color:var(--purple);}
+.chatbot-msg.user .chatbot-msg-icon{background:rgba(255,255,255,.1);color:#fff;}
+.chatbot-msg-time{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px;}
+.chatbot-input-wrap{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);background:var(--surface);}
+.chatbot-input{flex:1;padding:10px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
+.chatbot-input:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(168,85,247,.08);}
+.chatbot-send{background:var(--purple);color:#fff;border:none;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;font-size:14px;}
+.chatbot-send:hover{background:#7C3AED;transform:scale(1.05);}
+.chatbot-send:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.chatbot-typing{display:flex;align-items:center;gap:6px;padding:8px 12px;}
+.chatbot-typing-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:typingBounce 1.4s infinite ease-in-out both;}
+.chatbot-typing-dot:nth-child(1){animation-delay:-0.32s;}
+.chatbot-typing-dot:nth-child(2){animation-delay:-0.16s;}
+@keyframes typingBounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.chatbot-suggestions{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px;}
+.chatbot-chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;}
+.chatbot-chip:hover{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.3);color:var(--purple);}
+.chatbot-data-badge{display:inline-flex;align-items:center;gap:4px;font-family:'DM Mono',monospace;font-size:9px;color:var(--green);background:rgba(34,197,94,.08);padding:3px 8px;border-radius:20px;border:1px solid rgba(34,197,94,.15);margin-top:6px;}
+.chatbot-error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--red);margin-top:6px;}
+.chatbot-welcome{background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(168,85,247,.02));border:1px solid rgba(168,85,247,.15);border-radius:12px;padding:12px;font-size:12px;line-height:1.7;color:var(--muted);}
+.chatbot-welcome strong{color:var(--purple);font-weight:600;}
+.chatbot-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px;}
+.chatbot-table th{text-align:left;padding:5px 8px;font-family:'DM Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);border-bottom:1px solid var(--border);}
+.chatbot-table td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text);}
+.chatbot-table tr:hover{background:rgba(255,255,255,.02);}
+.chatbot-highlight{color:var(--gold);font-weight:600;}
+.chatbot-section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;color:var(--purple);margin:8px 0 4px;}
+@media(max-width:480px){.chatbot-wrap{width:calc(100vw - 32px);right:16px;bottom:16px;}.chatbot-body{height:420px;}}
 </style>
 </head>
 <body>
@@ -1651,6 +1701,549 @@ function renderVolunteers() {
       </div>`;
     }).join('')}`;
 }
+
+
+// ═══════════════════ AI ANALYTICS CHATBOT ENGINE ═══════════════════
+// Extracts specific fields from Firebase passes[] and summarizes via AI
+// Uses free OVHcloud AI endpoint (no signup, no API key) with local fallback
+
+const chatbotMessages = document.getElementById('chatbot-messages');
+const chatbotInput = document.getElementById('chatbot-input');
+const chatbotSend = document.getElementById('chatbot-send');
+const chatbotWrap = document.getElementById('chatbot-wrap');
+const chatbotToggleBtn = document.getElementById('chatbot-toggle-btn');
+let chatbotOpen = false;
+
+window.toggleChatbot = () => {
+  chatbotOpen = !chatbotOpen;
+  chatbotWrap.classList.toggle('collapsed', !chatbotOpen);
+  chatbotToggleBtn.textContent = chatbotOpen ? '▼' : '▲';
+  if (chatbotOpen) setTimeout(() => chatbotInput.focus(), 100);
+};
+
+function addChatbotMsg(text, isUser = false, isError = false) {
+  const div = document.createElement('div');
+  div.className = `chatbot-msg ${isUser ? 'user' : 'ai'}`;
+  const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  div.innerHTML = `
+    <div class="chatbot-msg-icon">${isUser ? '👤' : '🤖'}</div>
+    <div>
+      <div class="chatbot-msg-bubble">${isError ? `<div class="chatbot-error">${text}</div>` : text}</div>
+      <div class="chatbot-msg-time">${time}</div>
+    </div>
+  `;
+  chatbotMessages.appendChild(div);
+  chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+}
+
+function showChatbotTyping() {
+  const div = document.createElement('div');
+  div.className = 'chatbot-msg ai';
+  div.id = 'chatbot-typing';
+  div.innerHTML = `
+    <div class="chatbot-msg-icon">🤖</div>
+    <div>
+      <div class="chatbot-msg-bubble">
+        <div class="chatbot-typing">
+          <div class="chatbot-typing-dot"></div>
+          <div class="chatbot-typing-dot"></div>
+          <div class="chatbot-typing-dot"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  chatbotMessages.appendChild(div);
+  chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+}
+
+function hideChatbotTyping() {
+  const el = document.getElementById('chatbot-typing');
+  if (el) el.remove();
+}
+
+// ══ SMART DATA EXTRACTION ENGINE ══
+// Parses user intent and extracts ONLY relevant fields from passes[]
+
+function extractEventData(query) {
+  const q = query.toLowerCase();
+  const real = passes.filter(p => p.passID);
+  const entered = real.filter(p => p.entryStatus === 'entered' || p.entryStatus === 'Entered');
+  const pending = real.filter(p => p.entryStatus !== 'entered' && p.entryStatus !== 'Entered');
+
+  const data = {
+    meta: { query, totalRecords: real.length, timestamp: new Date().toISOString() },
+    summary: {
+      totalPasses: real.length,
+      totalEntered: entered.length,
+      totalPending: pending.length,
+      totalRevenue: real.reduce((s, p) => s + (p.amount || 1000), 0),
+      upiCount: real.filter(p => p.paymentMode === 'upi').length,
+      cashCount: real.filter(p => p.paymentMode === 'cash').length,
+      fakeAttempts: fakeAttempts.length,
+      duplicateAttempts: dupAttempts
+    }
+  };
+
+  // Department analysis
+  const deptMap = {};
+  real.forEach(p => {
+    const d = p.department || 'Unknown';
+    if (!deptMap[d]) deptMap[d] = { total: 0, entered: 0, pending: 0, revenue: 0, upi: 0, cash: 0 };
+    deptMap[d].total++;
+    deptMap[d].revenue += (p.amount || 1000);
+    if (p.paymentMode === 'upi') deptMap[d].upi++;
+    if (p.paymentMode === 'cash') deptMap[d].cash++;
+    if (p.entryStatus === 'entered' || p.entryStatus === 'Entered') deptMap[d].entered++;
+    else deptMap[d].pending++;
+  });
+  data.departments = deptMap;
+
+  // Year analysis
+  const yearMap = {};
+  real.forEach(p => {
+    const y = p.year || 'Unknown';
+    if (!yearMap[y]) yearMap[y] = { total: 0, entered: 0, pending: 0 };
+    yearMap[y].total++;
+    if (p.entryStatus === 'entered' || p.entryStatus === 'Entered') yearMap[y].entered++;
+    else yearMap[y].pending++;
+  });
+  data.years = yearMap;
+
+  // Payment analysis
+  data.payment = {
+    upi: { count: real.filter(p => p.paymentMode === 'upi').length, revenue: real.filter(p => p.paymentMode === 'upi').reduce((s, p) => s + (p.amount || 1000), 0) },
+    cash: { count: real.filter(p => p.paymentMode === 'cash').length, revenue: real.filter(p => p.paymentMode === 'cash').reduce((s, p) => s + (p.amount || 1000), 0) }
+  };
+
+  // Recent passes (last 10)
+  data.recent = real.slice(0, 10).map(p => ({
+    passID: p.passID, name: p.name, year: p.year, dept: p.department,
+    mode: p.paymentMode, amount: p.amount || 1000, status: p.entryStatus,
+    email: p.email, phone: p.phone, generatedBy: p.generatedBy,
+    entryTime: fmtTime(p.entryTime), generatedAt: fmtDateTime(p.generatedAt)
+  }));
+
+  // Volunteer stats
+  const volStats = {};
+  real.forEach(p => { if (p.generatedBy) volStats[p.generatedBy] = (volStats[p.generatedBy] || 0) + 1; });
+  data.volunteers = volStats;
+
+  // Security log
+  data.security = {
+    fakeAttempts: fakeAttempts.length,
+    duplicateAttempts: dupAttempts,
+    recentFakes: fakeAttempts.slice(-5).map(f => ({ id: f.scannedID, by: f.scannedBy, time: fmtTime(f.timestamp) }))
+  };
+
+  // Filter by query keywords for targeted extraction
+  const filtered = { meta: data.meta, queryContext: {} };
+
+  // Check for specific department filter
+  const deptKeywords = ['cse', 'it', 'ece', 'me', 'ce', 'ee', 'mi', 'mba', 'ai/ml'];
+  const matchedDept = deptKeywords.find(d => q.includes(d));
+  if (matchedDept) {
+    const deptName = Object.keys(deptMap).find(d => d.toLowerCase().includes(matchedDept)) || matchedDept.toUpperCase();
+    filtered.queryContext.department = deptName;
+    filtered.queryContext.deptData = deptMap[deptName] || { total: 0, entered: 0, pending: 0, revenue: 0 };
+  }
+
+  // Check for year filter
+  const yearKeywords = ['1st', 'first', '2nd', 'second', '3rd', 'third', '4th', 'fourth'];
+  const yearMapWords = { '1st': '1st', 'first': '1st', '2nd': '2nd', 'second': '2nd', '3rd': '3rd', 'third': '3rd', '4th': '4th', 'fourth': '4th' };
+  const matchedYear = yearKeywords.find(y => q.includes(y));
+  if (matchedYear) {
+    const yr = yearMapWords[matchedYear];
+    filtered.queryContext.year = yr;
+    filtered.queryContext.yearData = yearMap[yr] || { total: 0, entered: 0, pending: 0 };
+  }
+
+  // Check for payment mode filter
+  if (q.includes('upi')) filtered.queryContext.paymentMode = 'upi';
+  if (q.includes('cash')) filtered.queryContext.paymentMode = 'cash';
+
+  // Check for status filter
+  if (q.includes('pending') || q.includes('not entered')) filtered.queryContext.status = 'pending';
+  if (q.includes('entered') || q.includes('checked in')) filtered.queryContext.status = 'entered';
+
+  // Include relevant sections based on query
+  const includeAll = !matchedDept && !matchedYear && !q.includes('upi') && !q.includes('cash') && !q.includes('fake') && !q.includes('volunteer');
+
+  if (includeAll || q.includes('total') || q.includes('summary') || q.includes('overview') || q.includes('all')) {
+    filtered.summary = data.summary;
+  }
+  if (includeAll || q.includes('dept') || q.includes('department') || matchedDept) {
+    filtered.departments = matchedDept ? { [filtered.queryContext.department]: filtered.queryContext.deptData } : deptMap;
+  }
+  if (includeAll || q.includes('year') || matchedYear) {
+    filtered.years = matchedYear ? { [filtered.queryContext.year]: filtered.queryContext.yearData } : yearMap;
+  }
+  if (includeAll || q.includes('payment') || q.includes('upi') || q.includes('cash') || q.includes('revenue') || q.includes('money')) {
+    filtered.payment = data.payment;
+  }
+  if (q.includes('recent') || q.includes('latest') || q.includes('today') || q.includes('new')) {
+    filtered.recent = data.recent;
+  }
+  if (q.includes('volunteer') || q.includes('admin') || q.includes('who generated') || q.includes('generated by')) {
+    filtered.volunteers = data.volunteers;
+  }
+  if (q.includes('fake') || q.includes('invalid') || q.includes('security') || q.includes('forg')) {
+    filtered.security = data.security;
+  }
+  if (q.includes('entry') || q.includes('scan') || q.includes('gate') || q.includes('check')) {
+    filtered.entries = { entered: entered.length, pending: pending.length, percentage: real.length ? ((entered.length / real.length) * 100).toFixed(1) : 0 };
+  }
+
+  // If nothing specific matched, return summary
+  if (Object.keys(filtered).length <= 2) {
+    filtered.summary = data.summary;
+    filtered.departments = deptMap;
+    filtered.payment = data.payment;
+  }
+
+  return filtered;
+}
+
+// ══ AI PROMPT BUILDER ══
+function buildAIPrompt(query, data) {
+  return `You are the analytics assistant for "Freshers Party 2026" event management system.
+You answer queries using ONLY the provided Firebase data. Be concise, accurate, and use bold for key numbers.
+Format with bullet points or short paragraphs. Keep under 150 words unless detail requested.
+Never make up data not present in the JSON.
+
+USER QUERY: "${query}"
+
+EXTRACTED FIREBASE DATA:
+${JSON.stringify(data, null, 2)}
+
+Provide a clear, helpful summary answering the user's specific question:`;
+}
+
+// ══ FREE AI API CALL (OVHcloud - no signup, no key) ══
+async function callFreeAI(prompt) {
+  // OVHcloud AI Endpoints - free anonymous tier, 2 RPM per IP
+  // Models: Llama, Mistral, etc. hosted in EU
+  try {
+    const response = await fetch('https://llama-3-1-8b-instruct.endpoints.kepler.ai.cloud.ovh.net/api/openai_compat/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'Meta-Llama-3_1-8B-Instruct',
+        messages: [
+          { role: 'system', content: 'You are a concise analytics assistant. Use bullet points and bold numbers. Max 150 words.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 400,
+        temperature: 0.3
+      })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const result = await response.json();
+    return result.choices?.[0]?.message?.content || result.choices?.[0]?.text || null;
+  } catch (e) {
+    // Fallback: try another free endpoint
+    try {
+      const response2 = await fetch('https://mistral-7b-instruct.endpoints.kepler.ai.cloud.ovh.net/api/openai_compat/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'Mistral-7B-Instruct-v0_3',
+          messages: [
+            { role: 'system', content: 'You are a concise analytics assistant. Use bullet points and bold numbers. Max 150 words.' },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: 400,
+          temperature: 0.3
+        })
+      });
+      if (!response2.ok) throw new Error(`HTTP ${response2.status}`);
+      const result2 = await response2.json();
+      return result2.choices?.[0]?.message?.content || null;
+    } catch (e2) {
+      return null; // Both failed, use local fallback
+    }
+  }
+}
+
+// ══ LOCAL INTELLIGENT ANSWER GENERATOR (no AI needed) ══
+function generateLocalAnswer(query, data) {
+  const q = query.toLowerCase();
+  const real = passes.filter(p => p.passID);
+  let html = '';
+
+  // Helper to format table
+  const makeTable = (headers, rows) => {
+    let t = '<table class="chatbot-table"><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+    rows.forEach(row => {
+      t += '<tr>' + row.map(c => `<td>${c}</td>`).join('') + '</tr>';
+    });
+    return t + '</table>';
+  };
+
+  // Revenue / Money queries
+  if (q.includes('revenue') || q.includes('money') || q.includes('collection') || q.includes('amount') || q.includes('₹') || q.includes('rs')) {
+    const upiRev = data.payment?.upi?.revenue || real.filter(p=>p.paymentMode==='upi').reduce((s,p)=>s+(p.amount||1000),0);
+    const cashRev = data.payment?.cash?.revenue || real.filter(p=>p.paymentMode==='cash').reduce((s,p)=>s+(p.amount||1000),0);
+    const total = upiRev + cashRev;
+    html += `<div class="chatbot-section-title">💰 Revenue Summary</div>`;
+    html += `<strong>Total: ₹${total.toLocaleString()}</strong><br>`;
+    html += `• UPI: ₹${upiRev.toLocaleString()} (${data.payment?.upi?.count || real.filter(p=>p.paymentMode==='upi').length} passes)<br>`;
+    html += `• Cash: ₹${cashRev.toLocaleString()} (${data.payment?.cash?.count || real.filter(p=>p.paymentMode==='cash').length} passes)<br>`;
+    html += `• Average per pass: ₹${real.length ? Math.round(total/real.length) : 0}`;
+    return html;
+  }
+
+  // Department queries
+  if (q.includes('department') || q.includes('dept')) {
+    const depts = data.departments || {};
+    const sorted = Object.entries(depts).sort((a,b) => b[1].total - a[1].total);
+    if (sorted.length === 0) return 'No department data available yet.';
+
+    // If specific dept asked
+    const specificDept = data.queryContext?.department;
+    if (specificDept && depts[specificDept]) {
+      const d = depts[specificDept];
+      html += `<div class="chatbot-section-title">🏛️ ${specificDept} Department</div>`;
+      html += `<strong>${d.total} passes</strong> · ₹${d.revenue.toLocaleString()} revenue<br>`;
+      html += `• Entered: ${d.entered} | Pending: ${d.pending}<br>`;
+      html += `• UPI: ${d.upi} | Cash: ${d.cash}`;
+      return html;
+    }
+
+    html += `<div class="chatbot-section-title">🏛️ Department Breakdown</div>`;
+    html += makeTable(['Dept', 'Passes', 'Revenue', 'Entered', 'Pending'], 
+      sorted.map(([dept, s]) => [dept, s.total, `₹${s.revenue.toLocaleString()}`, s.entered, s.pending])
+    );
+    return html;
+  }
+
+  // Year queries
+  if (q.includes('year') || q.includes('1st') || q.includes('2nd') || q.includes('3rd') || q.includes('4th') || q.includes('first') || q.includes('second') || q.includes('third') || q.includes('fourth')) {
+    const years = data.years || {};
+    const sorted = Object.entries(years).sort((a,b) => b[1].total - a[1].total);
+    if (sorted.length === 0) return 'No year data available yet.';
+
+    const specificYear = data.queryContext?.year;
+    if (specificYear && years[specificYear]) {
+      const y = years[specificYear];
+      html += `<div class="chatbot-section-title">📅 ${specificYear} Year Students</div>`;
+      html += `<strong>${y.total} passes</strong><br>`;
+      html += `• Entered: ${y.entered} | Pending: ${y.pending}<br>`;
+      html += `• Entry rate: ${y.total ? ((y.entered/y.total)*100).toFixed(1) : 0}%`;
+      return html;
+    }
+
+    html += `<div class="chatbot-section-title">📅 Year-wise Breakdown</div>`;
+    html += makeTable(['Year', 'Total', 'Entered', 'Pending', 'Rate'],
+      sorted.map(([yr, s]) => [yr, s.total, s.entered, s.pending, `${s.total ? ((s.entered/s.total)*100).toFixed(1) : 0}%`])
+    );
+    return html;
+  }
+
+  // Payment mode queries
+  if (q.includes('upi') || q.includes('cash') || q.includes('payment')) {
+    const upi = data.payment?.upi?.count || real.filter(p => p.paymentMode === 'upi').length;
+    const cash = data.payment?.cash?.count || real.filter(p => p.paymentMode === 'cash').length;
+    const total = real.length;
+    html += `<div class="chatbot-section-title">💳 Payment Breakdown</div>`;
+    html += `<strong>${total} total passes</strong><br>`;
+    html += `• UPI: <span class="chatbot-highlight">${upi}</span> passes (${total ? ((upi/total)*100).toFixed(1) : 0}%)<br>`;
+    html += `• Cash: <span class="chatbot-highlight">${cash}</span> passes (${total ? ((cash/total)*100).toFixed(1) : 0}%)`;
+    return html;
+  }
+
+  // Entry / pending queries
+  if (q.includes('pending') || q.includes('not entered')) {
+    const pending = real.filter(p => p.entryStatus !== 'entered' && p.entryStatus !== 'Entered');
+    html += `<div class="chatbot-section-title">⏳ Pending Entries</div>`;
+    html += `<strong>${pending.length} passes pending</strong> out of ${real.length} total<br>`;
+    html += `• Already entered: ${real.length - pending.length}<br>`;
+    html += `• Completion rate: ${real.length ? (((real.length-pending.length)/real.length)*100).toFixed(1) : 0}%`;
+    return html;
+  }
+
+  if (q.includes('entered') || q.includes('check') || q.includes('gate') || q.includes('scan') || q.includes('arrived')) {
+    const entered = real.filter(p => p.entryStatus === 'entered' || p.entryStatus === 'Entered');
+    html += `<div class="chatbot-section-title">✅ Entry Status</div>`;
+    html += `<strong>${entered.length} students entered</strong> out of ${real.length}<br>`;
+    html += `• Completion: ${real.length ? ((entered.length/real.length)*100).toFixed(1) : 0}%<br>`;
+    html += `• Remaining: ${real.length - entered.length} students`;
+    return html;
+  }
+
+  // Fake / security queries
+  if (q.includes('fake') || q.includes('invalid') || q.includes('security') || q.includes('forg')) {
+    html += `<div class="chatbot-section-title">🚨 Security Log</div>`;
+    html += `• Fake attempts: <span class="chatbot-highlight">${fakeAttempts.length}</span><br>`;
+    html += `• Duplicate scans: <span class="chatbot-highlight">${dupAttempts}</span><br>`;
+    if (fakeAttempts.length > 0) {
+      html += `• Most recent fake: ${fakeAttempts[fakeAttempts.length-1]?.scannedID || 'N/A'}`;
+    }
+    return html;
+  }
+
+  // Volunteer queries
+  if (q.includes('volunteer') || q.includes('admin') || q.includes('who generated') || q.includes('generated by')) {
+    const vols = data.volunteers || {};
+    const sorted = Object.entries(vols).sort((a,b) => b[1] - a[1]);
+    if (sorted.length === 0) return 'No volunteer generation data yet.';
+    html += `<div class="chatbot-section-title">👥 Pass Generation by Admin</div>`;
+    html += makeTable(['Admin', 'Passes Generated'],
+      sorted.map(([email, count]) => [email.split('@')[0] || email, `<span class="chatbot-highlight">${count}</span>`])
+    );
+    return html;
+  }
+
+  // Recent / today queries
+  if (q.includes('recent') || q.includes('latest') || q.includes('today') || q.includes('new')) {
+    const recent = data.recent || [];
+    if (recent.length === 0) return 'No recent passes to show.';
+    html += `<div class="chatbot-section-title">🕐 Recent Passes (Last ${recent.length})</div>`;
+    html += makeTable(['Pass ID', 'Name', 'Dept', 'Year', 'Mode'],
+      recent.map(r => [r.passID, r.name, r.dept || '-', r.year || '-', r.mode || '-'])
+    );
+    return html;
+  }
+
+  // Specific student / search by name
+  if (q.includes('student') || q.includes('name') || (q.length > 3 && !q.includes('how many') && !q.includes('total'))) {
+    // Try to find student by name
+    const searchTerm = query.replace(/how many|total|show|list|find|get|student|pass/i, '').trim().toLowerCase();
+    if (searchTerm.length > 2) {
+      const matches = real.filter(p => p.name && p.name.toLowerCase().includes(searchTerm));
+      if (matches.length > 0) {
+        html += `<div class="chatbot-section-title">🔍 Student Search: "${searchTerm}"</div>`;
+        html += `Found <strong>${matches.length}</strong> match(es):<br>`;
+        matches.slice(0, 5).forEach(m => {
+          html += `• <strong>${m.name}</strong> — ${m.passID}, ${m.department || '-'}, ${m.year || '-'} Year, ${m.entryStatus === 'entered' ? '✅ Entered' : '⏳ Pending'}<br>`;
+        });
+        return html;
+      }
+    }
+  }
+
+  // Default comprehensive summary
+  const entered = real.filter(p => p.entryStatus === 'entered' || p.entryStatus === 'Entered');
+  const upi = real.filter(p => p.paymentMode === 'upi');
+  const cash = real.filter(p => p.paymentMode === 'cash');
+  const totalRev = real.reduce((s,p) => s + (p.amount || 1000), 0);
+
+  html += `<div class="chatbot-section-title">📊 FP2026 Event Summary</div>`;
+  html += `<strong>${real.length}</strong> total passes generated<br>`;
+  html += `• Entered: <span class="chatbot-highlight">${entered.length}</span> | Pending: ${real.length - entered.length}<br>`;
+  html += `• Revenue: <span class="chatbot-highlight">₹${totalRev.toLocaleString()}</span><br>`;
+  html += `• UPI: ${upi.length} | Cash: ${cash.length}<br>`;
+  html += `• Fake attempts: ${fakeAttempts.length} | Duplicates: ${dupAttempts}<br><br>`;
+  html += `<em>Ask about departments, years, payments, entries, security, or volunteers for details.</em>`;
+  return html;
+}
+
+// ══ MAIN CHATBOT HANDLER ══
+window.sendChatbot = async () => {
+  const query = chatbotInput.value.trim();
+  if (!query) return;
+
+  chatbotInput.value = '';
+  addChatbotMsg(query, true);
+  showChatbotTyping();
+  chatbotSend.disabled = true;
+
+  try {
+    // Step 1: Extract relevant data from Firebase
+    const eventData = extractEventData(query);
+
+    // Step 2: Try AI summarization first (free API)
+    const prompt = buildAIPrompt(query, eventData);
+    let aiResponse = null;
+
+    // Only try AI if we have substantial data (avoids wasting API calls on empty DB)
+    if (passes.length > 0) {
+      aiResponse = await callFreeAI(prompt);
+    }
+
+    hideChatbotTyping();
+
+    if (aiResponse) {
+      // AI succeeded — show AI-summarized answer
+      addChatbotMsg(aiResponse + `<div class="chatbot-data-badge">🤖 AI Summarized · 📡 Firebase Live</div>`);
+    } else {
+      // AI failed or empty DB — use local intelligent fallback
+      const localAnswer = generateLocalAnswer(query, eventData);
+      addChatbotMsg(localAnswer + `<div class="chatbot-data-badge">📡 Firebase Live · Local Analytics</div>`);
+    }
+  } catch (e) {
+    hideChatbotTyping();
+    console.error('Chatbot error:', e);
+    // Ultimate fallback
+    const eventData = extractEventData(query);
+    const localAnswer = generateLocalAnswer(query, eventData);
+    addChatbotMsg(localAnswer + `<div class="chatbot-data-badge">📡 Firebase Live · Local Mode</div>`);
+  }
+
+  chatbotSend.disabled = false;
+};
+
+window.sendChatbotQuick = (text) => {
+  chatbotInput.value = text;
+  sendChatbot();
+};
+
+// Auto-open chatbot when navigating to Analytics
+const _originalShowPage = window.showPage;
+window.showPage = function(name) {
+  _originalShowPage(name);
+  if (name === 'analytics') {
+    setTimeout(() => { if (!chatbotOpen) toggleChatbot(); }, 600);
+  }
+};
+
 </script>
+
+<!-- ═══════════════════ AI ANALYTICS CHATBOT ═══════════════════ -->
+<div class="chatbot-wrap collapsed" id="chatbot-wrap">
+  <div class="chatbot-header" onclick="toggleChatbot()">
+    <div class="chatbot-header-left">
+      <div class="chatbot-avatar">🤖</div>
+      <div>
+        <div class="chatbot-title">FP Analytics AI</div>
+        <div class="chatbot-status"><span class="chatbot-status-dot"></span>Live · Firebase Connected</div>
+      </div>
+    </div>
+    <button class="chatbot-toggle" id="chatbot-toggle-btn">▲</button>
+  </div>
+  <div class="chatbot-body">
+    <div class="chatbot-messages" id="chatbot-messages">
+      <div class="chatbot-msg ai">
+        <div class="chatbot-msg-icon">🤖</div>
+        <div>
+          <div class="chatbot-msg-bubble">
+            <div class="chatbot-welcome">
+              <strong>👋 Hello! I'm your FP2026 Analytics Assistant.</strong><br><br>
+              Ask me anything about your event data — I query Firebase live and summarize answers:<br><br>
+              • <em>"How many 1st year CSE students paid via UPI?"</em><br>
+              • <em>"Show total revenue and payment split"</em><br>
+              • <em>"Which department has most entries?"</em><br>
+              • <em>"List pending entries from 2nd year"</em><br>
+              • <em>"Summarize today's registrations"</em><br>
+              • <em>"Who generated the most passes?"</em><br><br>
+              <span style="color:var(--green)">✓ Powered by live Firebase data extraction + AI summarization</span>
+            </div>
+          </div>
+          <div class="chatbot-msg-time">Just now</div>
+        </div>
+      </div>
+    </div>
+    <div class="chatbot-suggestions" id="chatbot-suggestions">
+      <button class="chatbot-chip" onclick="sendChatbotQuick('Total passes & revenue summary')">📊 Overview</button>
+      <button class="chatbot-chip" onclick="sendChatbotQuick('UPI vs Cash payment breakdown')">💳 Payments</button>
+      <button class="chatbot-chip" onclick="sendChatbotQuick('Department with most entries')">🏛️ Top Dept</button>
+      <button class="chatbot-chip" onclick="sendChatbotQuick('Pending entries count by year')">⏳ Pending</button>
+      <button class="chatbot-chip" onclick="sendChatbotQuick('Security: fake attempts and duplicates')">🚨 Security</button>
+    </div>
+    <div class="chatbot-input-wrap">
+      <input class="chatbot-input" id="chatbot-input" placeholder="Ask about your event data…" onkeydown="if(event.key==='Enter')sendChatbot()">
+      <button class="chatbot-send" id="chatbot-send" onclick="sendChatbot()">➤</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
