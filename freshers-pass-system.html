@@ -514,7 +514,12 @@ tbody td{padding:10px 12px;color:var(--text);vertical-align:middle;}
 <div class="page" id="page-records">
   <div class="dash-header">
     <div class="dash-title">Pass Records</div>
-    <div class="dash-sub">Live from Firebase · All passes generated</div>
+    <div class="dash-sub">Live from Firebase · Switch between All / 1st Year / Senior passes</div>
+  </div>
+  <div class="inner-tabs" style="max-width:1300px;margin:0 auto;padding:0 28px 16px">
+    <button class="inner-tab active" onclick="switchRecordsTab('all')" id="tab-rec-all">📋 All Passes</button>
+    <button class="inner-tab" onclick="switchRecordsTab('1st')" id="tab-rec-1st">🎓 1st Year</button>
+    <button class="inner-tab" onclick="switchRecordsTab('senior')" id="tab-rec-senior">🎓 Senior (2nd-4th)</button>
   </div>
   <div class="wrap">
     <div class="panel">
@@ -611,6 +616,30 @@ tbody td{padding:10px 12px;color:var(--text);vertical-align:middle;}
         <div class="stat-lbl">Fake Attempts</div>
         <div class="stat-val red" id="a-fake">0</div>
         <div class="stat-sub">Invalid scans logged</div>
+      </div>
+    </div>
+
+    <!-- Year split stats -->
+    <div class="grid-4" style="margin-bottom:20px">
+      <div class="stat-card blue">
+        <div class="stat-lbl">1st Year Passes</div>
+        <div class="stat-val blue" id="a-1st-total">—</div>
+        <div class="prog-bar"><div class="prog-fill" id="a-prog-1st" style="width:0%;background:var(--blue)"></div></div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-lbl">1st Year Revenue</div>
+        <div class="stat-val purple" id="a-1st-revenue">—</div>
+        <div class="stat-sub" id="a-1st-revenue-sub"></div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-lbl">Senior Passes</div>
+        <div class="stat-val gold" id="a-senior-total">—</div>
+        <div class="prog-bar"><div class="prog-fill" id="a-prog-senior" style="width:0%;background:var(--gold)"></div></div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-lbl">Senior Revenue</div>
+        <div class="stat-val orange" id="a-senior-revenue">—</div>
+        <div class="stat-sub" id="a-senior-revenue-sub"></div>
       </div>
     </div>
 
@@ -927,7 +956,7 @@ function showDenied(email, name) {
 
 // ══ SUBSCRIPTIONS ══
 function subscribeAll() {
-  // Passes
+  // Passes — 2nd-4th Year (senior)
   if (unsubPasses) unsubPasses();
   unsubPasses = onSnapshot(
     query(collection(db,'passes'),orderBy('generatedAt','desc')),
@@ -940,6 +969,20 @@ function subscribeAll() {
       updateLiveCounter();
     },
     err=>{ console.warn('passes listener:', err.message); toast('Firestore: fix security rules — see instructions below','error'); }
+  );
+  // Passes — 1st Year (separate collection)
+  if (unsubPasses1st) unsubPasses1st();
+  unsubPasses1st = onSnapshot(
+    query(collection(db,'passes_1st'),orderBy('generatedAt','desc')),
+    snap=>{
+      passes_1st=[];
+      snap.forEach(d=>{ const data=d.data(); if(data.passID) passes_1st.push({fid:d.id,...data}); });
+      updateAllStats();
+      if (document.getElementById('page-records').classList.contains('active')) renderRecords();
+      renderAnalytics();
+      updateLiveCounter();
+    },
+    err=>{ console.warn('passes_1st listener:', err.message); }
   );
   // Volunteers — only subscribe if master
   if (currentRole === 'master') {
@@ -965,7 +1008,6 @@ function subscribeAll() {
     err=>{ console.warn('fakeAttempts listener:', err.message); }
   );
 }
-
 // ══ PAGE NAV ══
 window.showPage = function(name) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1004,6 +1046,65 @@ window.updatePreview = () => {
 function buildPassHTML(name,year,dept,mode,passID,amount,withQR,qrToken) {
   const qk=passID.replace(/[^a-z0-9]/gi,'_');
   const ml=mode==='upi'?'UPI':mode==='cash'?'Cash':mode.toUpperCase();
+  const is1st = String(year).toLowerCase().includes('1st');
+
+  if (is1st) {
+    // ══ 1ST YEAR EXCLUSIVE BLUE DESIGN ══
+    return `
+    <div class="pass-card" id="printable-pass" style="background:linear-gradient(145deg,#0a1a2a,#0f0f1a);border:1px solid rgba(59,130,246,.4);box-shadow:0 20px 50px rgba(0,0,0,.5);">
+      <div class="pass-header" style="background:linear-gradient(135deg,#3B82F6,#1E40AF);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
+        <div class="pass-event-name" style="font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:#fff;text-transform:uppercase;letter-spacing:1px;line-height:1.2;">Freshers Party<br>2026</div>
+        <div class="pass-year-badge" style="background:rgba(255,255,255,.2);padding:3px 9px;border-radius:20px;font-family:'DM Mono',monospace;font-size:10px;color:#fff;font-weight:600;">1ST YEAR EXCLUSIVE</div>
+      </div>
+      <div class="pass-body" style="padding:16px;">
+        <div class="pass-name-label" style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:3px;">Attendee</div>
+        <div class="pass-name" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:#3B82F6;margin-bottom:12px;">${name}</div>
+        <!-- ══ FEATURE CARDS FOR 1ST YEAR ══ -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:16px;margin-bottom:4px;">🌅</div>
+            <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:#3B82F6;text-transform:uppercase;letter-spacing:.5px;">The DAY Of New Beginnings, 2026</div>
+          </div>
+          <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:16px;margin-bottom:4px;">🎓</div>
+            <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:#3B82F6;text-transform:uppercase;letter-spacing:.5px;">jawaharlal nehru college of technology</div>
+          </div>
+          <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:16px;margin-bottom:4px;">💃</div>
+            <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:#3B82F6;text-transform:uppercase;letter-spacing:.5px;">Unlimited dance</div>
+          </div>
+          <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:16px;margin-bottom:4px;">🎉</div>
+            <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:#3B82F6;text-transform:uppercase;letter-spacing:.5px;">Freshers Exclusive</div>
+          </div>
+        </div>
+
+        <div class="pass-meta" style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px;">
+          <div><div class="pass-meta-label" style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:2px;">Department</div><div class="pass-meta-value" style="font-size:11px;font-weight:600;color:var(--text);">${dept}</div></div>
+          <div><div class="pass-meta-label" style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:2px;">Year</div><div class="pass-meta-value" style="font-size:11px;font-weight:600;color:#3B82F6;">${year}</div></div>
+          <div><div class="pass-meta-label" style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:2px;">Payment</div><div class="pass-meta-value" style="font-size:11px;font-weight:600;color:var(--text);">${ml}</div></div>
+          <div><div class="pass-meta-label" style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:2px;">Date</div><div class="pass-meta-value" style="font-size:11px;font-weight:600;color:var(--text);">${getPassDate()}</div></div>
+        </div>
+        <hr class="pass-divider" style="border:none;border-top:1px dashed rgba(59,130,246,.2);margin-bottom:14px;">
+        <div class="pass-qr-section" style="display:flex;align-items:center;gap:12px;">
+          <div class="pass-qr-box" id="qrbox_${qk}" style="background:#fff;padding:6px;border-radius:8px;flex-shrink:0;">
+            <div style="width:85px;height:85px;background:#eee;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:10px">${withQR?'…':'QR'}</div>
+          </div>
+          <div>
+            <div class="pass-id" style="font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:#3B82F6;letter-spacing:1px;">${passID}</div>
+            <div class="pass-id-label" style="font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-top:3px;">Pass ID</div>
+            <div class="pass-college-note" style="font-family:'DM Mono',monospace;font-size:9px;color:rgba(59,130,246,.6);margin-top:6px;letter-spacing:.5px;">✦ Valid with College ID · 1st Year Only</div>
+          </div>
+        </div>
+      </div>
+      <div class="pass-footer" style="background:rgba(59,130,246,.05);border-top:1px solid rgba(59,130,246,.1);padding:9px 16px;display:flex;align-items:center;justify-content:space-between;">
+        <div class="pass-amount" style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:#3B82F6;">₹${amount} Paid</div>
+        <div class="pass-status-badge" style="font-family:'DM Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;padding:3px 9px;border-radius:20px;background:rgba(59,130,246,.15);color:#3B82F6;border:1px solid rgba(59,130,246,.3);">✓ VALID · 1ST YEAR</div>
+      </div>
+    </div>`;
+  }
+
+  // ══ ORIGINAL GOLD DESIGN FOR SENIOR (2nd-4th) ══
   return `
   <div class="pass-card" id="printable-pass">
     <div class="pass-header">
@@ -1078,7 +1179,8 @@ window.generatePass = async () => {
     // 3. If no gaps, use max+1
     // 4. Atomic transaction updates counter to the highest assigned number
 
-    const counterRef = doc(db, 'meta', 'passCounter');
+    const isFirstYear = year === '1st';
+    const counterRef = doc(db, 'meta', isFirstYear ? 'passCounter_1st' : 'passCounter');
     const existingIDs = new Set(passes.map(p => p.passID));
 
     // Find lowest available number starting from 1
@@ -1110,7 +1212,8 @@ window.generatePass = async () => {
     };
 
     // Use passID (e.g. FP2026-001) as the Firestore document ID — easy to track
-    const passDocRef = doc(db, 'passes', finalPassID);
+    const collectionName = isFirstYear ? 'passes_1st' : 'passes';
+    const passDocRef = doc(db, collectionName, finalPassID);
     await setDoc(passDocRef, record);
     lastPass = {...record, fid:finalPassID, qrText};
 
@@ -1224,12 +1327,16 @@ Bring your College ID. Valid for ONE entry only.
 // ══ STATS ══
 function updateAllStats() {
   const real    = passes.filter(p=>p.passID);
-  const entered = real.filter(p=>p.entryStatus==='entered'||p.entryStatus==='Entered').length;
-  const remain  = real.length - entered;
-  const fakes   = fakeAttempts.length;
+  const real1st = passes_1st.filter(p=>p.passID);
+  const allReal = [...real, ...real1st];
+  const entered     = allReal.filter(p=>p.entryStatus==='entered'||p.entryStatus==='Entered').length;
+  const remain      = allReal.length - entered;
+  const entered1st  = real1st.filter(p=>p.entryStatus==='entered'||p.entryStatus==='Entered').length;
+  const enteredSen  = real.filter(p=>p.entryStatus==='entered'||p.entryStatus==='Entered').length;
+  const fakes       = fakeAttempts.length;
 
-  // Quick stats (admin page)
-  setText('q-total',   real.length);
+  // Quick stats (admin page) — COMBINED + SPLIT
+  setText('q-total',   allReal.length);
   setText('q-entered', entered);
   setText('q-remain',  remain);
   setText('q-fake',    fakes);
@@ -1241,7 +1348,8 @@ function setText(id, val) {
 }
 
 function updateLiveCounter() {
-  const entered = passes.filter(p=>p.entryStatus==='entered'||p.entryStatus==='Entered').length;
+  const allPasses = [...passes, ...passes_1st];
+  const entered = allPasses.filter(p=>p.entryStatus==='entered'||p.entryStatus==='Entered').length;
   setText('lc-num', entered);
   setText('hist-count', entered);
 }
@@ -1335,12 +1443,32 @@ function renderAnalytics() {
 }
 
 // ══ RECORDS ══
+window.switchRecordsTab = (tab) => {
+  recordsTab = tab;
+  document.querySelectorAll('#page-records .inner-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-rec-' + tab).classList.add('active');
+  renderRecords();
+};
+
 function renderRecords() {
   const wrap = document.getElementById('records-table-wrap');
-  const real = passes.filter(p=>p.passID);
-  setText('records-count', `${real.length} records`);
+  let displayPasses = [];
+  if (recordsTab === 'all') displayPasses = [...passes_1st, ...passes];
+  else if (recordsTab === '1st') displayPasses = passes_1st;
+  else displayPasses = passes;
+
+  // Sort by generatedAt desc
+  displayPasses.sort((a,b) => {
+    const ta = a.generatedAt?.seconds || a.generatedAt?.toMillis?.() || 0;
+    const tb = b.generatedAt?.seconds || b.generatedAt?.toMillis?.() || 0;
+    return tb - ta;
+  });
+
+  const real = displayPasses.filter(p=>p.passID);
+  const tabLabel = recordsTab === 'all' ? 'All' : recordsTab === '1st' ? '1st Year' : 'Senior';
+  setText('records-count', `${real.length} ${tabLabel} records`);
   if (!real.length) {
-    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">No passes yet.</div></div>';
+    wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">No ' + tabLabel.toLowerCase() + ' passes yet.</div></div>';
     return;
   }
   const isE = p=>p.entryStatus==='entered'||p.entryStatus==='Entered';
@@ -1475,7 +1603,8 @@ async function verifyPass(raw, isManual=false) {
   }
 
   // Find pass in live cache
-  const p = passes.find(x=>x.passID===passID);
+  let p = passes.find(x=>x.passID===passID);
+  if (!p) p = passes_1st.find(x=>x.passID===passID);
 
   if (!p) {
     // Log fake attempt to Firestore
@@ -1579,7 +1708,9 @@ async function logFake(passID, reason='not-found') {
 window.markEntry = async (fid,passID,name,dept,year) => {
   const now = Timestamp.now();
   try {
-    await updateDoc(doc(db,'passes',fid),{
+    const is1st = passes_1st.find(x=>x.fid===fid);
+    const collName = is1st ? 'passes_1st' : 'passes';
+    await updateDoc(doc(db,collName,fid),{
       entryStatus: 'entered', entryTime: now, verified:true,
       entryBy: currentUser?.email||''
     });
@@ -1939,7 +2070,8 @@ window.generatePass = async function() {
   btn.disabled = true; btn.textContent = '⏳ Saving…';
 
   try {
-    const counterRef = doc(db, 'meta', 'passCounter');
+    const isFirstYear = year === '1st';
+    const counterRef = doc(db, 'meta', isFirstYear ? 'passCounter_1st' : 'passCounter');
     const existingIDs = new Set([
       ...passes.map(p => p.passID),
       ...passes_1st.map(p => p.passID),
@@ -2045,7 +2177,9 @@ function hideChatbotTyping() {
 // ══ SMART DATA EXTRACTION ENGINE ══
 function extractEventData(query) {
   const q = query.toLowerCase();
-  const real = passes.filter(p => p.passID);
+  const real = [...passes_1st, ...passes].filter(p => p.passID);
+  const firstYear = passes_1st.filter(p => p.passID);
+  const senior = passes.filter(p => p.passID);
   const entered = real.filter(p => p.entryStatus === 'entered' || p.entryStatus === 'Entered');
   const pending = real.filter(p => p.entryStatus !== 'entered' && p.entryStatus !== 'Entered');
 
@@ -2107,6 +2241,10 @@ function extractEventData(query) {
     fakeAttempts: fakeAttempts.length,
     duplicateAttempts: dupAttempts,
     recentFakes: fakeAttempts.slice(-5).map(f => ({ id: f.scannedID, by: f.scannedBy, time: fmtTime(f.timestamp) }))
+  };
+  data.split = {
+    firstYear: { total: firstYear.length, entered: firstYear.filter(p=>p.entryStatus==='entered'||p.entryStatus==='Entered').length, revenue: firstYear.reduce((s,p)=>s+(p.amount||1000),0) },
+    senior: { total: senior.length, entered: senior.filter(p=>p.entryStatus==='entered'||p.entryStatus==='Entered').length, revenue: senior.reduce((s,p)=>s+(p.amount||1000),0) }
   };
 
   const filtered = { meta: data.meta, queryContext: {} };
