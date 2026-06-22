@@ -1724,6 +1724,285 @@ function renderVolunteers() {
 }
 
 
+
+// ═══════════════════ YEAR-SPLIT DATABASE & UI ═══════════════════
+
+let passes_1st = [];      // 1st year passes from 'passes_1st' collection
+let passes_other = [];    // Other years from 'passes_other' collection
+let currentRecordsYear = 'all';    // 'all', '1st', 'other'
+let currentAnalyticsYear = 'all';  // 'all', '1st', 'other'
+let unsubPasses1st = null;
+let unsubPassesOther = null;
+
+// ══ COLLECTION NAMES ══
+const COLLECTION_ALL = 'passes';
+const COLLECTION_1ST = 'passes_1st';
+const COLLECTION_OTHER = 'passes_other';
+
+// ══ SAVE PASS TO CORRECT COLLECTION BASED ON YEAR ══
+async function savePassToYearCollection(record, passID) {
+  const year = record.year;
+  if (year === '1st') {
+    await setDoc(doc(db, COLLECTION_1ST, passID), record);
+    console.log('Saved to passes_1st:', passID);
+  } else {
+    await setDoc(doc(db, COLLECTION_OTHER, passID), record);
+    console.log('Saved to passes_other:', passID);
+  }
+  // Also save to combined collection for backward compatibility
+  await setDoc(doc(db, COLLECTION_ALL, passID), record);
+}
+
+// ══ SUBSCRIBE TO ALL THREE COLLECTIONS ══
+function subscribeYearCollections() {
+  // 1st year passes
+  if (unsubPasses1st) unsubPasses1st();
+  unsubPasses1st = onSnapshot(
+    query(collection(db, COLLECTION_1ST), orderBy('generatedAt', 'desc')),
+    snap => {
+      passes_1st = [];
+      snap.forEach(d => { const data = d.data(); if (data.passID) passes_1st.push({fid: d.id, ...data}); });
+      updateYearBadges();
+      if (currentRecordsYear === '1st' && document.getElementById('page-records').classList.contains('active')) renderRecordsForYear('1st');
+      if (currentAnalyticsYear === '1st' && document.getElementById('page-analytics').classList.contains('active')) renderAnalyticsForYear('1st');
+    },
+    err => console.warn('passes_1st listener:', err.message)
+  );
+
+  // Other years passes
+  if (unsubPassesOther) unsubPassesOther();
+  unsubPassesOther = onSnapshot(
+    query(collection(db, COLLECTION_OTHER), orderBy('generatedAt', 'desc')),
+    snap => {
+      passes_other = [];
+      snap.forEach(d => { const data = d.data(); if (data.passID) passes_other.push({fid: d.id, ...data}); });
+      updateYearBadges();
+      if (currentRecordsYear === 'other' && document.getElementById('page-records').classList.contains('active')) renderRecordsForYear('other');
+      if (currentAnalyticsYear === 'other' && document.getElementById('page-analytics').classList.contains('active')) renderAnalyticsForYear('other');
+    },
+    err => console.warn('passes_other listener:', err.message)
+  );
+}
+
+// ══ UPDATE BADGE COUNTS ══
+function updateYearBadges() {
+  const all = passes.filter(p => p.passID).length;
+  const first = passes_1st.filter(p => p.passID).length;
+  const other = passes_other.filter(p => p.passID).length;
+
+  const setBadge = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setBadge('badge-rec-all', all);
+  setBadge('badge-rec-1st', first);
+  setBadge('badge-rec-other', other);
+  setBadge('badge-analytics-all', all);
+  setBadge('badge-analytics-1st', first);
+  setBadge('badge-analytics-other', other);
+}
+
+// ══ RECORDS YEAR SWITCHING ══
+window.switchRecordsYear = function(year) {
+  currentRecordsYear = year;
+  document.querySelectorAll('.year-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-rec-' + year).classList.add('active');
+
+  const titleMap = { all: '📋 All Passes', '1st': '🎓 1st Year Passes', other: '👥 Other Years Passes' };
+  const titleEl = document.getElementById('records-panel-title');
+  if (titleEl) titleEl.innerHTML = '<div class="panel-tl">' + titleMap[year] + '</div>';
+
+  renderRecordsForYear(year);
+};
+
+function renderRecordsForYear(year) {
+  const wrap = document.getElementById('records-table-wrap');
+  let data = [];
+  if (year === 'all') data = passes.filter(p => p.passID);
+  else if (year === '1st') data = passes_1st.filter(p => p.passID);
+  else data = passes_other.filter(p => p.passID);
+
+  setText('records-count', data.length + ' records');
+  if (!data.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-text">No passes for this year.</div></div>';
+    return;
+  }
+  const isE = p => p.entryStatus === 'entered' || p.entryStatus === 'Entered';
+  wrap.innerHTML = '<table><thead><tr><th>Pass ID</th><th>Name</th><th>Dept</th><th>Year</th><th>Mode</th><th>Amount</th><th>Phone</th><th>Email</th><th>Verified</th><th>Entry</th><th>Time</th><th>By</th></tr></thead><tbody>' +
+    data.map(p => '<tr><td class="tbl-mono" style="color:var(--gold)">' + p.passID + '</td><td style="font-weight:600">' + p.name + '</td><td>' + (p.department || '—') + '</td><td>' + (p.year || '—') + '</td><td class="tbl-mono" style="text-transform:uppercase">' + (p.paymentMode || '—') + '</td><td class="tbl-mono" style="color:var(--gold);font-weight:600">₹' + (p.amount || 1000) + '</td><td class="tbl-mono">' + (p.phone || '—') + '</td><td class="tbl-mono" style="font-size:10px;color:var(--muted)">' + (p.email || '—') + '</td><td><span class="edot"><span class="dot ' + (p.verified ? 'dot-green' : 'dot-yellow') + '"></span>' + (p.verified ? 'Yes' : 'No') + '</span></td><td><span class="edot"><span class="dot ' + (isE(p) ? 'dot-green' : 'dot-yellow') + '"></span>' + (isE(p) ? 'Entered' : 'Pending') + '</span></td><td class="tbl-mono" style="color:var(--muted)">' + fmtTime(p.entryTime) + '</td><td class="tbl-mono" style="font-size:10px;color:var(--muted)">' + ((p.generatedBy || '').split('@')[0] || '—') + '</td></tr>').join('') +
+    '</tbody></table>';
+}
+
+// ══ ANALYTICS YEAR SWITCHING ══
+window.switchAnalyticsYear = function(year) {
+  currentAnalyticsYear = year;
+  document.querySelectorAll('.analytics-year-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-analytics-' + year).classList.add('active');
+  document.querySelectorAll('.year-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-analytics-' + year).classList.add('active');
+  renderAnalyticsForYear(year);
+};
+
+function renderAnalyticsForYear(year) {
+  let real = [];
+  if (year === 'all') real = passes.filter(p => p.passID);
+  else if (year === '1st') real = passes_1st.filter(p => p.passID);
+  else real = passes_other.filter(p => p.passID);
+
+  const entered = real.filter(p => p.entryStatus === 'entered' || p.entryStatus === 'Entered');
+  const remain = real.length - entered.length;
+  const rev = real.reduce((s, p) => s + (p.amount || 1000), 0);
+  const total = real.length || 1;
+
+  const prefix = year === 'all' ? 'a-' : year === '1st' ? 'a1-' : 'ao-';
+  setText(prefix + 'total', real.length);
+  setText(prefix + 'entered', entered.length);
+  setText(prefix + 'remain', remain);
+  setText(prefix + 'revenue', '₹' + rev.toLocaleString());
+
+  const pEntered = document.getElementById(prefix + 'prog-entered');
+  const pRemain = document.getElementById(prefix + 'prog-remain');
+  if (pEntered) pEntered.style.width = ((entered.length / total) * 100).toFixed(1) + '%';
+  if (pRemain) pRemain.style.width = ((remain / total) * 100).toFixed(1) + '%';
+
+  // Payment breakdown for this year
+  const upi = real.filter(p => p.paymentMode === 'upi');
+  const cash = real.filter(p => p.paymentMode === 'cash');
+  const upiRev = upi.reduce((s, p) => s + (p.amount || 1000), 0);
+  const cashRev = cash.reduce((s, p) => s + (p.amount || 1000), 0);
+
+  const pbId = year === 'all' ? 'payment-breakdown' : 'payment-breakdown-' + year;
+  const pbEl = document.getElementById(pbId);
+  if (pbEl) {
+    pbEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px"><div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px"><div style="display:flex;justify-content:space-between;margin-bottom:5px;align-items:center"><span style="font-size:13px">📱 UPI</span><div style="text-align:right"><div style="font-family:DM Mono,monospace;font-size:14px;color:var(--blue);font-weight:700">₹' + upiRev.toLocaleString() + '</div><div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted)">' + upi.length + ' passes</div></div></div><div class="prog-bar"><div class="prog-fill" style="width:' + (total ? (upi.length / total * 100) : 0) + '%;background:var(--blue)"></div></div></div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px"><div style="display:flex;justify-content:space-between;margin-bottom:5px;align-items:center"><span style="font-size:13px">💵 Cash</span><div style="text-align:right"><div style="font-family:DM Mono,monospace;font-size:14px;color:var(--green);font-weight:700">₹' + cashRev.toLocaleString() + '</div><div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted">' + cash.length + ' passes</div></div></div><div class="prog-bar"><div class="prog-fill" style="width:' + (total ? (cash.length / total * 100) : 0) + '%;background:var(--green)"></div></div></div><div style="background:linear-gradient(135deg,rgba(245,200,66,.08),rgba(245,200,66,.02));border:1px solid rgba(245,200,66,.15);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:600">💰 Total Revenue</span><span style="font-family:DM Mono,monospace;font-size:16px;color:var(--gold);font-weight:700">₹' + (upiRev + cashRev).toLocaleString() + '</span></div></div>';
+  }
+
+  // Dept breakdown for this year
+  const deptId = year === 'all' ? 'dept-breakdown' : 'dept-breakdown-' + year;
+  const deptEl = document.getElementById(deptId);
+  if (deptEl) {
+    const deptMap = {};
+    real.forEach(p => { const d = p.department || '—'; deptMap[d] = (deptMap[d] || 0) + 1; });
+    deptEl.innerHTML = Object.entries(deptMap).sort((a, b) => b[1] - a[1]).map(([dept, count]) => '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 14px;min-width:100px;text-align:center"><div style="font-family:Syne,sans-serif;font-weight:800;font-size:20px;color:var(--gold)">' + count + '</div><div style="font-family:DM Mono,monospace;font-size:10px;color:var(--muted);text-transform:uppercase">' + dept + '</div></div>').join('') || '<div style="color:var(--muted);font-size:13px">No data yet</div>';
+  }
+}
+
+// Override original renderRecords to use year filter
+const _originalRenderRecords = renderRecords;
+renderRecords = function() { renderRecordsForYear(currentRecordsYear); };
+
+// Override original renderAnalytics to use year filter
+const _originalRenderAnalytics = renderAnalytics;
+renderAnalytics = function() { renderAnalyticsForYear(currentAnalyticsYear); };
+
+// ══ PASS DESIGN SWITCHER ══
+// When 1st year is selected, use the special purple Freshers design
+function getPassCardClass(year) {
+  return year === '1st' ? 'pass-card-1st' : 'pass-card';
+}
+
+// Override buildPassHTML to support year-specific design
+const _originalBuildPassHTML = buildPassHTML;
+buildPassHTML = function(name, year, dept, mode, passID, amount, withQR, qrToken) {
+  const is1st = year && year.includes('1st');
+  const cardClass = is1st ? 'pass-card-1st' : 'pass-card';
+  const qk = passID.replace(/[^a-z0-9]/gi, '_');
+  const ml = mode === 'upi' ? 'UPI' : mode === 'cash' ? 'Cash' : mode.toUpperCase();
+
+  if (is1st) {
+    return '<div class="' + cardClass + '" id="printable-pass"><div class="freshers-badge">✨ FRESHERS</div><div class="pass-header"><div class="pass-event-name">Freshers Party<br>2026</div><div class="pass-year-badge">ENTRY PASS</div></div><div class="pass-body"><div class="pass-name-label">Attendee</div><div class="pass-name">' + name + '</div><div class="pass-meta"><div><div class="pass-meta-label">Department</div><div class="pass-meta-value">' + dept + '</div></div><div><div class="pass-meta-label">Year</div><div class="pass-meta-value">' + year + '</div></div><div><div class="pass-meta-label">Payment</div><div class="pass-meta-value">' + ml + '</div></div><div><div class="pass-meta-label">Date</div><div class="pass-meta-value">' + getPassDate() + '</div></div></div><hr class="pass-divider"><div class="pass-qr-section"><div class="pass-qr-box" id="qrbox_' + qk + '"><div style="width:85px;height:85px;background:#eee;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:10px">' + (withQR ? '…' : 'QR') + '</div></div><div><div class="pass-id">' + passID + '</div><div class="pass-id-label">Pass ID</div><div class="pass-college-note">✦ Valid with College ID</div></div></div></div><div class="pass-footer"><div class="pass-amount">₹' + amount + ' Paid</div><div class="pass-status-badge">✓ VALID</div></div></div>';
+  }
+
+  // Default design (non-1st year)
+  return '<div class="' + cardClass + '" id="printable-pass"><div class="pass-header"><div class="pass-event-name">Freshers Party<br>2026</div><div class="pass-year-badge">ENTRY PASS</div></div><div class="pass-body"><div class="pass-name-label">Attendee</div><div class="pass-name">' + name + '</div><div class="pass-meta"><div><div class="pass-meta-label">Department</div><div class="pass-meta-value">' + dept + '</div></div><div><div class="pass-meta-label">Year</div><div class="pass-meta-value">' + year + '</div></div><div><div class="pass-meta-label">Payment</div><div class="pass-meta-value">' + ml + '</div></div><div><div class="pass-meta-label">Date</div><div class="pass-meta-value">' + getPassDate() + '</div></div></div><hr class="pass-divider"><div class="pass-qr-section"><div class="pass-qr-box" id="qrbox_' + qk + '"><div style="width:85px;height:85px;background:#eee;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:10px">' + (withQR ? '…' : 'QR') + '</div></div><div><div class="pass-id">' + passID + '</div><div class="pass-id-label">Pass ID</div><div class="pass-college-note">✦ Valid with College ID</div></div></div></div><div class="pass-footer"><div class="pass-amount">₹' + amount + ' Paid</div><div class="pass-status-badge">✓ VALID</div></div></div>';
+};
+
+// ══ UPDATE GENERATE PASS TO SAVE TO YEAR COLLECTION ══
+// Override the generatePass function to save to correct collection
+const _originalGeneratePass = window.generatePass;
+window.generatePass = async function() {
+  const btn = document.getElementById('gen-btn');
+  if (btn.disabled) return;
+
+  const name = document.getElementById('f-name').value.trim();
+  const year = document.getElementById('f-year').value;
+  const dept = document.getElementById('f-dept').value;
+  const phone = document.getElementById('f-phone').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const mode = document.getElementById('f-mode').value;
+  const txn = document.getElementById('f-txn').value.trim();
+  const amount = parseInt(document.getElementById('f-amount').value) || 1000;
+
+  if (!name) return toast('Enter student name', 'error');
+  if (!year) return toast('Select year', 'error');
+  if (!dept) return toast('Select department', 'error');
+  if (!phone || phone.length !== 10) return toast('Valid 10-digit phone required', 'error');
+  if (!mode) return toast('Select payment mode', 'error');
+
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+  try {
+    const counterRef = doc(db, 'meta', 'passCounter');
+    const existingIDs = new Set([
+      ...passes.map(p => p.passID),
+      ...passes_1st.map(p => p.passID),
+      ...passes_other.map(p => p.passID)
+    ]);
+
+    let newCount = 1;
+    while (existingIDs.has(pid(newCount))) newCount++;
+    const finalPassID = pid(newCount);
+
+    await runTransaction(db, async (tx) => {
+      const counterDoc = await tx.get(counterRef);
+      const currentMax = counterDoc.exists() ? (counterDoc.data().count || 0) : 0;
+      tx.set(counterRef, { count: Math.max(currentMax, newCount) }, { merge: true });
+    });
+
+    const token = makeToken(finalPassID);
+    const qrText = makeQRText(finalPassID, token);
+
+    const record = {
+      passID: finalPassID, name, year, department: dept, phone, email,
+      paymentMode: mode, upiTxnID: txn, amount,
+      qrToken: token,
+      entryStatus: 'notEntered', entryTime: null, verified: false,
+      receiptURL: '/receipts/' + finalPassID + '.pdf',
+      generatedBy: currentUser ? currentUser.email : '',
+      generatedAt: Timestamp.now()
+    };
+
+    // Save to year-specific collection AND combined collection
+    await savePassToYearCollection(record, finalPassID);
+    lastPass = { ...record, fid: finalPassID, qrText };
+
+    // Add to local arrays for immediate preview
+    if (year === '1st') passes_1st.unshift({ ...record, fid: finalPassID });
+    else passes_other.unshift({ ...record, fid: finalPassID });
+    passes.unshift({ ...record, fid: finalPassID });
+
+    const qk = finalPassID.replace(/[^a-z0-9]/gi, '_');
+    document.getElementById('pass-preview-area').innerHTML = buildPassHTML(name, year + ' Year', dept, mode, finalPassID, amount, true, token);
+    makeQR('qrbox_' + qk, qrText);
+    document.getElementById('pass-action-btns').style.display = 'flex';
+
+    if (email && email.includes('@')) sendPassEmail(email, name, year, dept, finalPassID, amount, mode);
+
+    toast('✅ ' + finalPassID + ' saved!');
+    btn.textContent = '✅ Pass Generated';
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+    console.error(e);
+    btn.disabled = false;
+    btn.textContent = '🎟️ Generate Pass';
+  }
+};
+
+// ══ UPDATE SUBSCRIBE ALL TO INCLUDE YEAR COLLECTIONS ══
+const _originalSubscribeAll = subscribeAll;
+subscribeAll = function() {
+  _originalSubscribeAll();
+  subscribeYearCollections();
+};
+
+
 // ═══════════════════ AI ANALYTICS CHATBOT ENGINE ═══════════════════
 
 const chatbotMessages = document.getElementById('chatbot-messages');
