@@ -1,0 +1,24 @@
+{
+  "name": "Groovinn Eve 2K26 - Freshers' Party | JNCT Rewa",
+  "short_name": "Groovinn Eve 2K26",
+  "description": "The Grand Freshers' Party of JNCT Rewa - An unforgettable night of glamour, music, and celebration!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#d4a843",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
